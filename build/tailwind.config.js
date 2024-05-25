@@ -6,7 +6,7 @@ module.exports = {
         theme: {
                 extend: {
                         maxWidth: {
-                                "1/3": "33.333333%",
+                                "1/4": "25%",
                         },
                         colors: {
                                 transparent: "transparent",
