@@ -8,10 +8,11 @@
     <link href="./main.css" rel="stylesheet" />
     <script defer src="./js/hello.js"></script>
     <script defer src="./js/carousel.js"></script>
+    <script defer src="./js/background.js"></script>
     <link rel="shortcut icon" href="./favicon.ico" />
   </head>
 
-  <body class="bg-dark text-center bg-gradient-to-r from-purple-500 to-pink-500">
+  <body class="bg-dark text-center">
     <div class="flex items-center text-text flex-col p-3 space-y-4">
       <h1 id="hello" class="px-7 py-2 text-7xl lg:text-[12rem] rounded-3xl mt-10 text-nowrap border-solid border-text">
         Hello!
@@ -50,7 +51,11 @@
       <hr class="w-11/12 h-2 text-text" />
       <h1 id="projects" class="px-7 py-2 text-5xl mt-24 text-nowrap self-start">Projects</h1>
       <p class="subtitle">All my other projects</p>
-      <div class="flex-row flex-nowrap overflow-x-scroll inline-flex max-w-full py-14" id="carousel">
+      <div
+        class="flex-row flex-nowrap overflow-x-scroll inline-flex max-w-full py-14"
+        id="carousel"
+        style="scrollbar-width: none"
+      >
         <div class="bubble">yooo</div>
         <div class="bubble">yooo</div>
         <div class="bubble">yooo</div>
