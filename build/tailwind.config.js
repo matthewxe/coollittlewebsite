@@ -1,21 +1,10 @@
 /** @type {import('tailwindcss').Config} */
+// const defaultTheme = require("tailwindcss/defaultTheme");
+
 module.exports = {
         content: ["../web/static/**/*.{html,js}"],
         theme: {
                 extend: {
-                        // animation: {
-                        //         flow: "flow 1s ease infinite",
-                        // },
-                        // keyframes: {
-                        //         flow: {
-                        //                 "0%, 100%": {
-                        //                         background: "linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(9,9,121,1) 35%, rgba(0,212,255,1) 100%)",
-                        //                 },
-                        //                 "50%": {
-                        //                         background: "linear-gradient(90deg, rgba(0,212,255,1) 0%, rgba(9,9,121,1) 35%, rgba(2,0,36,1) 100%)",
-                        //                 },
-                        //         },
-                        // },
                         colors: {
                                 transparent: "transparent",
                                 current: "currentColor",
@@ -40,8 +29,8 @@ module.exports = {
                                 accent: "#4062BB",
                         },
                         fontFamily: {
-                                display: ["Tex Gyre Adventor Regular"],
-                                body: ["Ubuntu"],
+                                body: ['"Fira Code"'],
+                                times: ["Times"],
                         },
                 },
         },

@@ -1,10 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* @import url("../web/static/assets/fonts/TimesNewRoman/timesnewromanbold.ttf.ttf"); */
+/* @import url("../web/static/assets/fonts/Iosevka/Iosevka-Thin.ttc"); */
+/**/
+@font-face {
+  font-family: "Times";
+  src: url("./assets/fonts/TimesNewRoman/timesnewromanbold.ttf");
+}
+@font-face {
+  font-family: "Fira Code";
+  src: url("./assets/fonts/FiraCodeNerdFont-Regular.ttf");
+}
 
 @layer components {
   .bubble {
-    @apply px-3 py-1 bg-dark-95 rounded-3xl text-2xl;
+    @apply px-3 py-1 bg-dark-95 rounded-3xl text-xl;
   }
   .subtitle {
     @apply rounded-3xl text-xl self-start px-12;
