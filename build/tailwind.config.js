@@ -5,6 +5,9 @@ module.exports = {
         content: ["../web/static/**/*.{html,js}"],
         theme: {
                 extend: {
+                        maxWidth: {
+                                "1/3": "33.333333%",
+                        },
                         colors: {
                                 transparent: "transparent",
                                 current: "currentColor",
