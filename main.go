@@ -19,10 +19,10 @@ func serve_page(w http.ResponseWriter, r *http.Request) {
 	var page string
 	if string(r.URL.Path) == DIR {
 		log.Print("serving index")
-		page = "./static/hello.html"
+		page = "./web/static/hello.html"
 	} else {
-		log.Print("serving assets")
-		page = "./static/" + strings.TrimLeft(r.URL.Path, DIR)
+		page = "./web/static/" + strings.TrimPrefix(r.URL.Path, DIR)
+		log.Print(r.URL.Path + " - " + DIR + " serving " + page)
 	}
 
 	http.ServeFile(w, r, page)
