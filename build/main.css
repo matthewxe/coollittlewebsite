@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .bubble {
+    @apply px-3 py-1 bg-dark-95 rounded-3xl text-2xl;
+  }
+  .link {
+    @apply hover:underline text-primary;
+  }
+  .bento {
+    @apply w-32 h-32 border-2 hover:w-44 hover:h-44 overflow-hidden hover:overflow-visible hover:-z-10;
+  }
+}

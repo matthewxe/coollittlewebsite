@@ -9,31 +9,45 @@
     <script defer src="./js/hello.js"></script>
   </head>
   <body class="bg-dark text-center">
-    <div
-      class="flex items-center text-text flex-col p-3 content-evenly space-y-4"
-    >
+    <div class="flex items-center text-text flex-col p-3 space-y-4">
       <h1
         id="hello"
-        class="px-7 py-2 text-7xl lg:text-[12rem] rounded-3xl mt-10 text-nowrap"
+        class="px-7 py-2 text-7xl lg:text-[12rem] rounded-3xl mt-10 text-nowrap border-solid border-text"
       >
         Hello!
       </h1>
-      <p class="px-3 py-1 bg-dark-95 rounded-3xl text-2xl items-center">
+      <p class="bubble items-center">
         My name is Matthew E. but i sometimes go by the name
-        <a
-          href="https://github.com/GravityShark0/"
-          class="hover:underline text-primary"
-          >GravityShark</a
-        >
+        <a href="https://github.com/matthewxe/" class="link">matthewxe</a>
         <img src="./assets/me2.svg" class="w-8 inline-flex" />
       </p>
-      <p class="px-3 py-1 bg-dark-95 rounded-3xl text-2xl">
+      <p class="bubble">
         A 16 year old who is passionate about coding and anything software
       </p>
-      <p class="px-3 py-1 bg-dark-95 rounded-3xl text-2xl">
-        I have finished CS50x, some small challenges in C and a code snippet
-        website
+      <p class="bubble">
+        I have finished CS50x, some small challenges in C, a
+        <sub>short</sub> game in Godot 4, and a
+        <a href="https://github.com/matthewxe/code-snips/tree/main" class="link"
+          >code snippet website</a
+        >
       </p>
+
+      <hr class="w-11/12 h-2 text-text" />
+      <h1 id="skills" class="px-7 py-2 text-5xl mt-24 text-nowrap self-start">
+        My kit
+      </h1>
+      <div class="flex border-text">
+        <div class="bg-blue-500 bento">Python</div>
+        <div class="bg-cyan-500 text-dark bento">Go</div>
+        <div class="bg-cyan-200 text-dark bento">Tailwind</div>
+        <div class="bg-blue-800 bento">CSS</div>
+        <div class="bg-blue-900 bento">C</div>
+      </div>
+
+      <hr class="w-11/12 h-2 text-text" />
+      <h1 id="projects" class="px-7 py-2 text-5xl mt-24 text-nowrap self-start">
+        Projects
+      </h1>
     </div>
   </body>
 </html>

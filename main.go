@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const DIR string = "/whatisthethingaboutmeyousay/"
+const DIR string = "/whatisaboutme/"
 
 func main() {
 
