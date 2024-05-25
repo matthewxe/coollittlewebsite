@@ -36,6 +36,7 @@ func main() {
 	setup_sql(db)
 
 	log.Printf("The key is\n%s", api_key)
+	os.WriteFile("/tmp/coollittlewebsite_key", []byte(api_key), 0666)
 	log.Print("Listening on " + PORT + "...")
 
 	http.HandleFunc("GET "+ABOUT_DIR,
