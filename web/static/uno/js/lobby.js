@@ -22,7 +22,7 @@ document.getElementById("form").onsubmit = function () {
         return false;
 };
 
-conn = new WebSocket("ws://" + document.location.host + "/uno/ws");
+conn = new WebSocket("wss://" + document.location.host + "/uno/ws");
 conn.onclose = function (evt) {
         var item = document.createElement("div");
         item.innerHTML = "<b>Connection closed.</b>";
