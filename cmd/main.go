@@ -13,7 +13,7 @@ import (
 
 const ABOUT_DIR string = "/whataboutme"
 const STATIC_DIR string = "web/static"
-const PORT string = ":8008"
+const PORT string = ":8080"
 
 var api_key = random_key(32)
 var db *sql.DB
