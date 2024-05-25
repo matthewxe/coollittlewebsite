@@ -2,7 +2,7 @@ package serve
 
 import (
 	"coollittlewebsite/internal/serve/assets"
-	"coollittlewebsite/internal/uno/lobby"
+	"coollittlewebsite/internal/uno"
 	"coollittlewebsite/internal/webhooks"
 	"log"
 	"net/http"
@@ -36,7 +36,7 @@ func Setup() {
 	//http.HandleFunc("POST "+ABOUT_DIR+"/addanewpostyoubingus", blog.ServeNewPost)
 
 	// TODO: Uno 2
-	lobby.Serve()
+	uno.Serve()
 
 	// Serve
 	err := http.ListenAndServe(port, nil)

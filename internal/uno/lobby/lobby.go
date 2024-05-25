@@ -1,29 +1,196 @@
 package lobby
 
 import (
-	"coollittlewebsite/internal/serve/assets"
+	"bytes"
+	"log"
 	"net/http"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
-func Serve() {
+var lobbyList []Lobby
 
-	http.HandleFunc("GET /uno", lobby)
-	http.HandleFunc("GET /uno/{$}",
-		func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "/uno", http.StatusPermanentRedirect)
-		})
+type Lobby struct {
+	// Logged in Players
+	players map[*Player]bool
+	// Request to login
+	login chan *Player
+	// Request to logout
+	logout chan *Player
 
-	http.HandleFunc("GET /uno/", assets.ServeAssets)
-	hub := newHub()
-	go hub.run()
-	http.HandleFunc("GET /uno/ws", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
-	})
-	// http.HandleFunc("GET /uno/", func(w http.ResponseWriter, r *http.Request) {
-	// 	assets.ServeAssets(w, r, "/uno", "/uno")
-	// })
+	// If the 
+	state int
+	// 0 Not Playing
+	// 1 Playing
+	// broadcast chan []byte
 }
 
-func lobby(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./web/static/uno/lobby.html")
+func newLobby() *Lobby {
+	var l = &Lobby{
+		login:make(chan *Player),
+		logout:make(chan *Player),
+		players:make(map[*Player]bool),
+	}
+	l.state = 0
+	return l
+}
+
+func (l *Lobby) run() {
+	for {
+		select {
+			case player := <-l.login:
+				l.players[player] = true
+			case player := <-l.logout:
+				if _, ok := l.players[player]; ok {
+					delete(l.players, player)
+				}
+			// case message := <-l.broadcast:
+			// 	for client := range hlclients {
+			// 		select {
+			// 		case client.send <- message:
+			// 		default:
+			// 			close(client.send)
+			// 			delete(hlclients, client)
+			// 		}
+			// 	}
+		}
+	}
+}
+
+
+type Player struct {
+	hub *Hub
+
+	// The websocket connection.
+	conn *websocket.Conn
+
+	name chan string
+
+	cookie chan http.Cookie
+}
+
+
+
+const (
+	// Time allowed to write a message to the peer.
+	writeWait = 10 * time.Second
+
+	// Time allowed to read the next pong message from the peer.
+	pongWait = 60 * time.Second
+
+	// Send pings to peer with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
+
+	// Maximum message size allowed from peer.
+	maxMessageSize = 512
+)
+
+var (
+	newline = []byte{'\n'}
+	space   = []byte{' '}
+)
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+// Client is a middleman between the websocket connection and the hub.
+// type Client struct {
+// 	hub *Hub
+//
+// 	// The websocket connection.
+// 	conn *websocket.Conn
+//
+// 	// Buffered channel of outbound messages.
+// 	send chan []byte
+// }
+
+// readPump pumps messages from the websocket connection to the hub.
+//
+// The application runs readPump in a per-connection goroutine. The application
+// ensures that there is at most one reader on a connection by executing all
+// reads from this goroutine.
+func (c *Player) readPump() {
+	defer func() {
+		c.hub.unregister <- c
+		c.conn.Close()
+	}()
+	c.conn.SetReadLimit(maxMessageSize)
+	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	for {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("error: %v", err)
+			}
+			break
+		}
+		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		c.hub.broadcast <- message
+	}
+}
+
+// writePump pumps messages from the hub to the websocket connection.
+//
+// A goroutine running writePump is started for each connection. The
+// application ensures that there is at most one writer to a connection by
+// executing all writes from this goroutine.
+func (c *Player) writePump() {
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
+	for {
+		select {
+		case message, ok := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if !ok {
+				// The hub closed the channel.
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+
+			w, err := c.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				return
+			}
+			w.Write(message)
+
+			// Add queued chat messages to the current websocket message.
+			n := len(c.send)
+			for i := 0; i < n; i++ {
+				w.Write(newline)
+				w.Write(<-c.send)
+			}
+
+			if err := w.Close(); err != nil {
+				return
+			}
+		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}
+}
+
+// serveWs handles websocket requests from the peer.
+func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	client := &Player{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client.hub.register <- client
+
+	// Allow collection of memory referenced by the caller by doing all work in
+	// new goroutines.
+	go client.writePump()
+	go client.readPump()
 }
