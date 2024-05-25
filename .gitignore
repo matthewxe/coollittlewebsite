@@ -20,3 +20,7 @@ tmp/
 
 # Go workspace file
 go.work
+
+# Database
+data/
+*.db
