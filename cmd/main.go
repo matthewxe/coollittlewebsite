@@ -4,17 +4,26 @@ import (
 	"database/sql"
 	"log"
 	"math/rand"
-	_ "modernc.org/sqlite"
 	"net/http"
 	"os"
 	"strings"
+
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/hex"
+	"io"
+	"os/exec"
+
+	_ "modernc.org/sqlite"
 	// "text/template"
 )
 
 const ABOUT_DIR string = "/whataboutme"
+const GITHUB_WEBHOOK_DIR string = "/heyyyyhaveyouheardaboutthisthingcalledahook" // Temporary solution for live reload over github
 const STATIC_DIR string = "web/static"
 const PORT string = ":8080"
 
+var GITHUB_WEBHOOK_SECRET string = os.Getenv("GITHUB_WEBHOOK_SECRET")
 var api_key = random_key(32)
 var db *sql.DB
 
@@ -38,6 +47,7 @@ func main() {
 	http.HandleFunc("GET "+ABOUT_DIR+"/blog/{id}", serve_blog)
 	http.HandleFunc("GET "+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
 	http.HandleFunc("POST "+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
+	http.HandleFunc("POST "+ABOUT_DIR+GITHUB_WEBHOOK_DIR, github_webhook)
 	log.Fatal(http.ListenAndServe(PORT, nil))
 }
 
@@ -105,4 +115,72 @@ func serve_blog(w http.ResponseWriter, r *http.Request) {
 	rows.Scan(content)
 
 	w.Write([]byte(content))
+}
+
+func github_webhook(w http.ResponseWriter, r *http.Request) {
+	log.Print("Github webhook activated")
+
+	payload, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+		return
+	}
+	signature := r.Header.Get("X-Hub-Signature")
+	if signature == "" {
+		http.Error(w, "Signature missing", http.StatusBadRequest)
+		return
+	}
+	if !verifySignature(signature, payload) {
+		http.Error(w, "Signature verification failed", http.StatusForbidden)
+		return
+	}
+	if err := gitPull(); err != nil {
+		http.Error(w, "Failed to execute git pull", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond to GitHub with a success status
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Webhook received successfully"))
+	//         if self.path == '/github-webhook/':
+	//             print("Handling GitHub webhook request")  # Debugging line
+	//             # Read the payload from the request
+	//             content_length = int(self.headers['Content-Length'])
+	//             payload = self.rfile.read(content_length)
+	//
+	//             # Verify the webhook signature (if using a secret)
+	//             if verify_github_webhook_signature(self.headers, payload, "DATAPACK"):
+	//                 run_scripts(payload, self, DATAPACK)
+	//             elif verify_github_webhook_signature(self.headers, payload, "RESOURCEPACK"):
+	//                 run_scripts(payload, self, RESOURCEPACK)
+	//             else:
+	//                 self.send_response(HTTPStatus.UNAUTHORIZED)
+	//                 self.end_headers()
+	//                 self.wfile.write(b'Unauthorized')
+
+}
+
+func verifySignature(signature string, payload []byte) bool {
+	// GitHub sends the signature in the format "sha1=XXXXXXXXX"
+	parts := strings.SplitN(signature, "=", 2)
+	if len(parts) != 2 || parts[0] != "sha1" {
+		return false
+	}
+
+	// Compute the HMAC digest of the payload using the secret
+	mac := hmac.New(sha1.New, []byte(GITHUB_WEBHOOK_SECRET))
+	mac.Write(payload)
+	expectedMAC := hex.EncodeToString(mac.Sum(nil))
+
+	// Compare the computed digest with the signature
+	return hmac.Equal([]byte(parts[1]), []byte(expectedMAC))
+}
+
+func gitPull() error {
+	cmd := exec.Command("git", "pull")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("git pull failed: %s", string(output))
+	}
+	return nil
 }
