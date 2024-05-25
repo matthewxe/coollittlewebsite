@@ -47,7 +47,7 @@ func main() {
 	http.HandleFunc("GET "+ABOUT_DIR+"/blog/{id}", serve_blog)
 	http.HandleFunc("GET "+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
 	http.HandleFunc("POST "+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
-	http.HandleFunc("POST "+ABOUT_DIR+GITHUB_WEBHOOK_DIR, github_webhook)
+	http.HandleFunc("POST "+GITHUB_WEBHOOK_DIR, github_webhook)
 	log.Fatal(http.ListenAndServe(PORT, nil))
 }
 
