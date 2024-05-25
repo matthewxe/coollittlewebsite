@@ -13,6 +13,7 @@ import (
 
 const ABOUT_DIR string = "/whataboutme"
 const STATIC_DIR string = "web/static"
+const PORT string = ":80"
 
 var api_key = random_key(32)
 var db *sql.DB
@@ -26,7 +27,7 @@ func main() {
 	setup_sql(db)
 
 	log.Printf("The key is\n%s", api_key)
-	log.Print("Listening on :8000...")
+	log.Print("Listening on ", PORT, "...")
 
 	http.HandleFunc("GET "+ABOUT_DIR,
 		func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +38,7 @@ func main() {
 	http.HandleFunc("GET "+ABOUT_DIR+"/blog/{id}", serve_blog)
 	http.HandleFunc("GET "+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
 	http.HandleFunc("POST "+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe(PORT, nil))
 }
 
 func random_key(len int) (key []byte) {
@@ -88,7 +89,7 @@ func serve_new_post(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, ABOUT_DIR, http.StatusFound)
 			return
 		}
-			log.Print("fail")
+		log.Print("fail")
 		w.Write([]byte("Oogabooga"))
 	}
 }
