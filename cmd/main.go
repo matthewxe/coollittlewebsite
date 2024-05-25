@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"text/template"
+	// "text/template"
 )
 
 const ABOUT_DIR string = "/whataboutme"
@@ -36,7 +36,8 @@ func main() {
 		})
 	http.HandleFunc("GET "+ABOUT_DIR+"/", serve_assets)
 	http.HandleFunc("GET "+ABOUT_DIR+"/blog/{id}", serve_blog)
-	http.HandleFunc("GET POST "+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
+	http.HandleFunc("GET"+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
+	// http.HandleFunc("POST"+ABOUT_DIR+"/addanewpostyoubingus", serve_new_post)
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
@@ -63,14 +64,15 @@ func serve_assets(w http.ResponseWriter, r *http.Request) {
 
 	_, err := os.Stat(page)
 	if os.IsNotExist(err) {
-		log.Print("failed to serve asset" + page)
-		http.Redirect(w, r, ABOUT_DIR, http.StatusPermanentRedirect)
+		log.Print("failed to serve asset " + page)
+		http.Redirect(w, r, ABOUT_DIR, http.StatusTemporaryRedirect)
 		return
 	}
 	http.ServeFile(w, r, page)
 }
 
 func serve_new_post(w http.ResponseWriter, r *http.Request) {
+	log.Print("add a new post")
 	switch r.Method {
 	case http.MethodGet:
 	case http.MethodPost:
@@ -87,5 +89,5 @@ func serve_blog(w http.ResponseWriter, r *http.Request) {
 	var content string
 	rows.Scan(content)
 
-	w.Write([]byte( content ))
+	w.Write([]byte(content))
 }
