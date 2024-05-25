@@ -12,7 +12,8 @@ import (
 	"strings"
 )
 
-var GITHUB_WEBHOOK_SECRET string = os.Getenv("GITHUB_WEBHOOK_SECRET")
+const GithubWebhookDir string = "/heyyyyhaveyouheardaboutthisthingcalledahook" // Temporary solution for live reload over github
+var GithubWebhookSecret string = os.Getenv("GITHUB_WEBHOOK_SECRET")
 
 func GithubWebhookHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Print("Github webhook activated")
@@ -49,7 +50,7 @@ func VerifySignature(signature string, payload []byte) bool {
 	}
 
 	// Compute the HMAC digest of the payload using the secret
-	mac := hmac.New(sha1.New, []byte(GITHUB_WEBHOOK_SECRET))
+	mac := hmac.New(sha1.New, []byte(GithubWebhookSecret))
 	mac.Write(payload)
 	expectedMAC := hex.EncodeToString(mac.Sum(nil))
 
