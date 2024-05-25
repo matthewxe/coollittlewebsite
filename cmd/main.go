@@ -13,7 +13,7 @@ import (
 
 const ABOUT_DIR string = "/whataboutme"
 const STATIC_DIR string = "web/static"
-const PORT string = ":80"
+const PORT string = ":8008"
 
 var api_key = random_key(32)
 var db *sql.DB
@@ -27,7 +27,7 @@ func main() {
 	setup_sql(db)
 
 	log.Printf("The key is\n%s", api_key)
-	log.Print("Listening on ", PORT, "...")
+	log.Print("Listening on " + PORT + "...")
 
 	http.HandleFunc("GET "+ABOUT_DIR,
 		func(w http.ResponseWriter, r *http.Request) {
