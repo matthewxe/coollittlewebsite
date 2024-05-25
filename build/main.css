@@ -1,12 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* @import url("../web/static/assets/fonts/TimesNewRoman/timesnewromanbold.ttf.ttf"); */
-/* @import url("../web/static/assets/fonts/Iosevka/Iosevka-Thin.ttc"); */
-/**/
+
 @font-face {
   font-family: "Times";
-  src: url("./assets/fonts/TimesNewRoman/timesnewromanbold.ttf");
+  src: url("./assets/fonts/timesnewromanbold.ttf");
 }
 @font-face {
   font-family: "Fira Code";

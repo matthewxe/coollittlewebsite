@@ -29,8 +29,8 @@ module.exports = {
                                 accent: "#4062BB",
                         },
                         fontFamily: {
-                                body: ['"Fira Code"'],
                                 times: ["Times"],
+                                body: ['"Fira Code"'],
                         },
                 },
         },
