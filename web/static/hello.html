@@ -4,9 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hey it's me</title>
+
     <link href="./main.css" rel="stylesheet" />
+    <script defer src="./js/hello.js"></script>
   </head>
-  <body>
-    <h1>Hello <span class="fg-red">World!</span></h1>
+  <body class="bg-dark text-center">
+    <div
+      class="flex items-center text-text flex-col p-3 content-evenly space-y-4"
+    >
+      <h1
+        id="hello"
+        class="px-7 py-2 text-7xl lg:text-[12rem] rounded-3xl mt-10 text-nowrap"
+      >
+        Hello!
+      </h1>
+      <p class="px-3 py-1 bg-dark-95 rounded-3xl text-2xl items-center">
+        My name is Matthew E. but i sometimes go by the name
+        <a
+          href="https://github.com/GravityShark0/"
+          class="hover:underline text-primary"
+          >GravityShark</a
+        >
+        <img src="./assets/me2.svg" class="w-8 inline-flex" />
+      </p>
+      <p class="px-3 py-1 bg-dark-95 rounded-3xl text-2xl">
+        A 16 year old who is passionate about coding and anything software
+      </p>
+      <p class="px-3 py-1 bg-dark-95 rounded-3xl text-2xl">
+        I have finished CS50x, some small challenges in C and a code snippet
+        website
+      </p>
+    </div>
   </body>
 </html>

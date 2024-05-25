@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="28.014278mm"
+   height="28.014282mm"
+   viewBox="0 0 28.014278 28.014282"
+   version="1.1"
+   id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient7">
+      <stop
+         style="stop-color:#df83e8;stop-opacity:1;"
+         offset="0"
+         id="stop9" />
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="1"
+         id="stop8" />
+    </linearGradient>
+    <linearGradient
+       xlink:href="#linearGradient7"
+       id="linearGradient9"
+       x1="89.490723"
+       y1="17.952677"
+       x2="102.74319"
+       y2="28.243231"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     id="layer1"
+     transform="translate(-89.490725,-3.945536)">
+    <circle
+       style="fill:#fff8e8;fill-opacity:1;stroke:url(#linearGradient9);stroke-width:0.268201;stroke-opacity:1"
+       id="path2"
+       cx="103.49786"
+       cy="17.952677"
+       r="13.87304" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:45.1556px;font-family:Z003;-inkscape-font-specification:Z003;fill:#8600fc;fill-opacity:1;stroke-width:0.264583"
+       x="97.379204"
+       y="27.753008"
+       id="text2"><tspan
+         id="tspan2"
+         style="font-size:45.1556px;fill:#8600fc;fill-opacity:1;stroke-width:0.264583"
+         x="97.379204"
+         y="27.753008">e</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:45.1556px;fill:#000000;stroke-width:0.264583"
+       x="85.91243"
+       y="27.60663"
+       id="text1"><tspan
+         id="tspan1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:45.1556px;font-family:Z003;-inkscape-font-specification:Z003;stroke-width:0.264583"
+         x="85.91243"
+         y="27.60663">m</tspan></text>
+  </g>
+</svg>
