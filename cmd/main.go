@@ -118,6 +118,7 @@ func serve_blog(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(content))
 }
 
+// Made by ChatGPT tbh I can't write this stuff myself
 func github_webhook(w http.ResponseWriter, r *http.Request) {
 	log.Print("Github webhook activated")
 
@@ -143,22 +144,6 @@ func github_webhook(w http.ResponseWriter, r *http.Request) {
 	// Respond to GitHub with a success status
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Webhook received successfully"))
-	//         if self.path == '/github-webhook/':
-	//             print("Handling GitHub webhook request")  # Debugging line
-	//             # Read the payload from the request
-	//             content_length = int(self.headers['Content-Length'])
-	//             payload = self.rfile.read(content_length)
-	//
-	//             # Verify the webhook signature (if using a secret)
-	//             if verify_github_webhook_signature(self.headers, payload, "DATAPACK"):
-	//                 run_scripts(payload, self, DATAPACK)
-	//             elif verify_github_webhook_signature(self.headers, payload, "RESOURCEPACK"):
-	//                 run_scripts(payload, self, RESOURCEPACK)
-	//             else:
-	//                 self.send_response(HTTPStatus.UNAUTHORIZED)
-	//                 self.end_headers()
-	//                 self.wfile.write(b'Unauthorized')
-
 }
 
 func verifySignature(signature string, payload []byte) bool {
