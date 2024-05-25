@@ -1,29 +1,29 @@
 package main
 
 import (
-	"fmt"
-	// "log"
+	"log"
 	"net/http"
+	"strings"
 )
 
-func main() {
-	go func() {
-		http.Handle("/", http.FileServer(http.Dir("./static/hello.html")))
-		err := http.ListenAndServe(":8080", nil)
-		// fmt.Println(err)
-		fmt.Println(err)
-	}()
-	fmt.Println("running in 8080")
+const DIR string = "/whatisthethingaboutmeyousay/"
 
-	// requestServer()
+func main() {
+
+	log.Print("Listening on :8000...")
+	http.HandleFunc(DIR+"*", serve_page)
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
-// func homePage(w http.ResponseWriter, r *http.Request) {
-// 	w.Write([]byte("You cool"))
-// }
-//
-// func requestServer() {
-// 	resp, err := http.Get("http://localhost:8080")
-// 	fmt.Println(err)
-// 	defer resp.Body.Close()
-// }
+func serve_page(w http.ResponseWriter, r *http.Request) {
+	var page string
+	if string(r.URL.Path) == DIR {
+		log.Print("serving index")
+		page = "./static/hello.html"
+	} else {
+		log.Print("serving assets")
+		page = "./static/" + strings.TrimLeft(r.URL.Path, DIR)
+	}
+
+	http.ServeFile(w, r, page)
+}
