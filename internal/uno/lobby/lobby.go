@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var lobbyList []Lobby
+var LobbyList []Lobby
 
 type Lobby struct {
 	// Logged in Players
@@ -19,7 +19,7 @@ type Lobby struct {
 	// Request to logout
 	logout chan *Player
 
-	// If the 
+	// If the
 	state int
 	// 0 Not Playing
 	// 1 Playing
@@ -28,9 +28,9 @@ type Lobby struct {
 
 func newLobby() *Lobby {
 	var l = &Lobby{
-		login:make(chan *Player),
-		logout:make(chan *Player),
-		players:make(map[*Player]bool),
+		login:   make(chan *Player),
+		logout:  make(chan *Player),
+		players: make(map[*Player]bool),
 	}
 	l.state = 0
 	return l
@@ -39,12 +39,12 @@ func newLobby() *Lobby {
 func (l *Lobby) run() {
 	for {
 		select {
-			case player := <-l.login:
-				l.players[player] = true
-			case player := <-l.logout:
-				if _, ok := l.players[player]; ok {
-					delete(l.players, player)
-				}
+		case player := <-l.login:
+			l.players[player] = true
+		case player := <-l.logout:
+			if _, ok := l.players[player]; ok {
+				delete(l.players, player)
+			}
 			// case message := <-l.broadcast:
 			// 	for client := range hlclients {
 			// 		select {
@@ -57,19 +57,6 @@ func (l *Lobby) run() {
 		}
 	}
 }
-
-
-type Player struct {
-	hub *Hub
-
-	// The websocket connection.
-	conn *websocket.Conn
-
-	name chan string
-
-	cookie chan http.Cookie
-}
-
 
 
 const (
@@ -97,24 +84,23 @@ var upgrader = websocket.Upgrader{
 }
 
 // Client is a middleman between the websocket connection and the hub.
-// type Client struct {
-// 	hub *Hub
-//
-// 	// The websocket connection.
-// 	conn *websocket.Conn
-//
-// 	// Buffered channel of outbound messages.
-// 	send chan []byte
-// }
+type Client struct {
+	hub *Lobby
+
+	// The websocket connection.
+	conn *websocket.Conn
+
+	// Buffered channel of outbound messages.
+	send chan []byte
+}
 
 // readPump pumps messages from the websocket connection to the hub.
-//
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
 func (c *Player) readPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.hub.logout <- c
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
@@ -129,15 +115,16 @@ func (c *Player) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+		// c.hub.broadcast <- message
 	}
 }
 
-// writePump pumps messages from the hub to the websocket connection.
 //
-// A goroutine running writePump is started for each connection. The
-// application ensures that there is at most one writer to a connection by
-// executing all writes from this goroutine.
+// // writePump pumps messages from the hub to the websocket connection.
+// //
+// // A goroutine running writePump is started for each connection. The
+// // application ensures that there is at most one writer to a connection by
+// // executing all writes from this goroutine.
 func (c *Player) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -178,8 +165,8 @@ func (c *Player) writePump() {
 		}
 	}
 }
-
-// serveWs handles websocket requests from the peer.
+//
+// // serveWs handles websocket requests from the peer.
 func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

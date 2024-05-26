@@ -4,10 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Create</title>
+    <script src="./uno/js/grab.js" type="text/javascript" defer></script>
   </head>
   <body>
+    <h1>Logged in as {{.}}</h1>
     <h1>Ongoing games</h1>
-    <ul>
+    <button onmousedown="refresh(ongoing)">Refresh</button>
+    <ul id="ongoing">
       <li>woah</li>
       <li>woahin</li>
     </ul>
