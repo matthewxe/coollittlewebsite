@@ -4,10 +4,12 @@ import (
 	"coollittlewebsite/internal/serve/assets"
 	"coollittlewebsite/internal/uno/lobby"
 	"coollittlewebsite/internal/uno/player"
+	"fmt"
+	"html/template"
 	"log"
 	"math/rand"
 	"net/http"
-	"text/template"
+	"strconv"
 	"time"
 )
 
@@ -24,6 +26,7 @@ func Serve() {
 	http.HandleFunc("GET /uno/create", create)
 	http.HandleFunc("GET /uno/logout", logout)
 	http.HandleFunc("GET /uno/list", list)
+	http.HandleFunc("GET /uno/lobby/{id}", lobbyServe)
 
 	// TODO: in a lobby
 	//http.HandleFunc("GET /uno/lobby", )
@@ -85,14 +88,33 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 func list(w http.ResponseWriter, r *http.Request) {
 	checkForCookie(w, r)
+	var ready string
+	var ongoing string
+	var done string
 	for i, lobbi := range lobby.LobbyList {
-		idx := i + 1
-		start := "<li> " + string(idx)
-		w.Write([]byte(start))
-		for player, _ := range lobbi.Players {
-			w.Write([]byte(player.Name))
+		out := fmt.Sprintf("<li>%v. ", i+1)
+		out += lobbi.Leader.Name + "(leader)"
+		for player := range lobbi.Players {
+			out += ", "
+			out += player.Name
 		}
-		w.Write([]byte("</li>"))
+		out += fmt.Sprintf("  <button onmousedown=\"window.location.href = '/uno/lobby/ %v';\">Join</button></li>", i)
+
+		switch lobbi.State {
+		case 0:
+			ready += out
+		case 1:
+			ongoing += out
+		case 2:
+			done += out
+		}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, err := w.Write([]byte("<h1>Ready</h1>" + ready + "<h1>Ongoing</h1>" + ongoing + "<h1>Done</h1>" + done))
+
+	if err != nil {
+		log.Fatal(err)
+		return
 	}
 }
 
@@ -100,11 +122,10 @@ func create(w http.ResponseWriter, r *http.Request) {
 	cookie := checkForCookie(w, r)
 	log.Println("serving /uno/create to ", player.PlayerList[cookie.Value].Name)
 
-	lob := lobby.NewLobby()
+	lobbyId := strconv.Itoa(lobby.NewLobby(player.PlayerList[cookie.Value]))
+	// log.Println("lobbyid", lobbyId)
 
-	lob.Leader = player.PlayerList[cookie.Value]
-
-	log.Println(lob)
+	http.Redirect(w, r, "/uno/lobby/"+lobbyId, http.StatusSeeOther)
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
@@ -150,4 +171,22 @@ func checkForCookie(w http.ResponseWriter, r *http.Request) *http.Cookie {
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
 	}
 	return cookie
+}
+
+func lobbyServe(w http.ResponseWriter, r *http.Request) {
+	cookie := checkForCookie(w, r)
+	id := r.PathValue("id")
+	log.Printf("serving /uno/lobby/%v to %v", id, player.PlayerList[cookie.Value].Name)
+
+	tmpl, err := template.ParseFiles("./web/static/uno/lobby.html")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	err = tmpl.Execute(w, player.PlayerList[cookie.Value].Name)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 }

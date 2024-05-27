@@ -9,12 +9,10 @@ function refresh(ongoing) {
                         "/uno/list",
         );
 
-        fetch(url, {
-                headers: { getnames: true },
-        })
+        fetch(url)
                 .then((response) => response.text())
                 .then((text) => {
-                        ongoing.innerText = text;
+                        ongoing.innerHTML = text;
                 });
 }
 
