@@ -1,23 +1,25 @@
 package lobby
 
+// "bytes"
+// "log"
+// "net/http"
+// "time"
+// "github.com/gorilla/websocket"
 import (
-	"bytes"
-	"log"
-	"net/http"
-	"time"
-
-	"github.com/gorilla/websocket"
+	"coollittlewebsite/internal/uno/player"
 )
 
 var LobbyList []Lobby
 
 type Lobby struct {
 	// Logged in Players
-	players map[*Player]bool
+	Leader player.Player
+
+	Players map[player.Player]bool
 	// Request to login
-	login chan *Player
+	// login chan *player.Player
 	// Request to logout
-	logout chan *Player
+	// logout chan *player.Player
 
 	// If the
 	state int
@@ -26,15 +28,17 @@ type Lobby struct {
 	// broadcast chan []byte
 }
 
-func newLobby() *Lobby {
+func NewLobby() *Lobby {
 	var l = &Lobby{
-		login:   make(chan *Player),
-		logout:  make(chan *Player),
-		players: make(map[*Player]bool),
+		// login:   make(chan *player.Player),
+		// logout:  make(chan *player.Player),
+		Players: make(map[player.Player]bool),
 	}
 	l.state = 0
 	return l
 }
+
+/*
 
 func (l *Lobby) run() {
 	for {
@@ -98,7 +102,7 @@ type Client struct {
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (c *Player) readPump() {
+func (c *player.Player) readPump() {
 	defer func() {
 		c.hub.logout <- c
 		c.conn.Close()
@@ -125,7 +129,7 @@ func (c *Player) readPump() {
 // // A goroutine running writePump is started for each connection. The
 // // application ensures that there is at most one writer to a connection by
 // // executing all writes from this goroutine.
-func (c *Player) writePump() {
+func (c *player.Player) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -173,7 +177,7 @@ func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	client := &Player{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client := &player.Player{hub: hub, conn: conn, send: make(chan []byte, 256)}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
@@ -181,3 +185,4 @@ func serveWs(hub *hub.Hub, w http.ResponseWriter, r *http.Request) {
 	go client.writePump()
 	go client.readPump()
 }
+*/
