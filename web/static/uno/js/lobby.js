@@ -56,7 +56,7 @@ document.getElementById("form").onsubmit = function () {
 
 if (window["WebSocket"]) {
         conn = new WebSocket(
-                "ws:" +
+                "wss:" +
                         document.location.href.replace(
                                 document.location.protocol,
                                 "",

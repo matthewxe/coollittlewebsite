@@ -98,8 +98,8 @@ func serveLogin(w http.ResponseWriter, r *http.Request) { //{
 			cookieNew.Name = "unoName"
 			cookieNew.Value = key
 			cookieNew.Expires = time.Now().Add(365 * 24 * time.Hour) // After 1 year
-			// cookie.Secure = true
-			cookieNew.Secure = false
+			cookie.Secure = true
+			// cookieNew.Secure = false
 			cookieNew.HttpOnly = true
 			cookieNew.Path = "/uno"
 			http.SetCookie(w, cookieNew)
