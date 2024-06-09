@@ -15,21 +15,23 @@ import (
 
 func Serve() {
 	// Main page and assets
-	http.HandleFunc("GET /uno", index)
+	http.HandleFunc("GET /uno", serveIndex)
 	http.HandleFunc("GET /uno/{$}",
 		func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/uno", http.StatusPermanentRedirect)
 		})
 	http.HandleFunc("GET /uno/", assets.ServeAssets)
 
-	// TODO: Creating a lobby
-	http.HandleFunc("GET /uno/create", create)
-	http.HandleFunc("GET /uno/logout", logout)
-	http.HandleFunc("GET /uno/list", list)
-	http.HandleFunc("GET /uno/lobby/{id}", lobbyServe)
+	// Logging out
+	http.HandleFunc("GET /uno/logout", serveLogout)
 
-	// TODO: in a lobby
-	//http.HandleFunc("GET /uno/lobby", )
+	// TODO: Creating a lobby
+	http.HandleFunc("GET /uno/create", serveCreate)
+	http.HandleFunc("GET /uno/list", serveList)
+
+	// TODO: Serve a lobby
+	http.HandleFunc("GET /uno/lobby/{id}", serveLobby)
+	http.HandleFunc("GET /uno/lobby/{id}/ws", serveLobby)
 
 	// hub := newHub()
 	// go hub.run()
@@ -42,7 +44,7 @@ func Serve() {
 	// })
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
+func serveIndex(w http.ResponseWriter, r *http.Request) { // {{{
 	log.Println("serving /uno")
 	cookie, err := r.Cookie("unoName")
 
@@ -84,9 +86,9 @@ func index(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 		return
 	}
-}
+} // }}}
 
-func list(w http.ResponseWriter, r *http.Request) {
+func serveList(w http.ResponseWriter, r *http.Request) { // {{{
 	checkForCookie(w, r)
 	var ready string
 	var ongoing string
@@ -116,9 +118,9 @@ func list(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 		return
 	}
-}
+} // }}}
 
-func create(w http.ResponseWriter, r *http.Request) {
+func serveCreate(w http.ResponseWriter, r *http.Request) { // {{{
 	cookie := checkForCookie(w, r)
 	log.Println("serving /uno/create to ", player.PlayerList[cookie.Value].Name)
 
@@ -126,9 +128,9 @@ func create(w http.ResponseWriter, r *http.Request) {
 	// log.Println("lobbyid", lobbyId)
 
 	http.Redirect(w, r, "/uno/lobby/"+lobbyId, http.StatusSeeOther)
-}
+} // }}}
 
-func logout(w http.ResponseWriter, r *http.Request) {
+func serveLogout(w http.ResponseWriter, r *http.Request) { // {{{
 	cookie := checkForCookie(w, r)
 	log.Println("serving /uno/logout to \"", cookie.Value, "\"")
 
@@ -144,9 +146,32 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, c)
 	log.Println("")
 	http.Redirect(w, r, "/uno", http.StatusSeeOther)
-}
+} // }}}
 
-func randomKey(len int) (key []byte) {
+func serveLobby(w http.ResponseWriter, r *http.Request) { // {{{
+	cookie := checkForCookie(w, r)
+	id, _ := strconv.Atoi(r.PathValue("id"))
+	if lobby.LobbyCount > id {
+		http.Redirect(w, r, "/uno", http.StatusSeeOther)
+	}
+	log.Printf("serving /uno/lobby/%v to %v", id, player.PlayerList[cookie.Value].Name)
+
+	tmpl, err := template.ParseFiles("./web/static/uno/lobby.html")
+	log.Println("Parsing...")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	err = tmpl.Execute(w, player.PlayerList[cookie.Value].Name)
+	log.Println("Executing...")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+} // }}}
+
+func randomKey(len int) (key []byte) { // {{{
 	for i := 0; i < len; i++ {
 		excluded := []int{1, 26, 59}
 		random := randIntExclude(93, excluded)
@@ -163,30 +188,12 @@ func randIntExclude(top int, excluded []int) (random int) {
 		}
 	}
 	return
-}
+} // }}}
 
-func checkForCookie(w http.ResponseWriter, r *http.Request) *http.Cookie {
+func checkForCookie(w http.ResponseWriter, r *http.Request) *http.Cookie { // {{{
 	cookie, err := r.Cookie("unoName")
 	if err != nil || player.PlayerList[cookie.Value].Name == "" {
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
 	}
 	return cookie
-}
-
-func lobbyServe(w http.ResponseWriter, r *http.Request) {
-	cookie := checkForCookie(w, r)
-	id := r.PathValue("id")
-	log.Printf("serving /uno/lobby/%v to %v", id, player.PlayerList[cookie.Value].Name)
-
-	tmpl, err := template.ParseFiles("./web/static/uno/lobby.html")
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	err = tmpl.Execute(w, player.PlayerList[cookie.Value].Name)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-}
+} // }}}
