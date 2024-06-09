@@ -5,7 +5,7 @@ import "log"
 var lobbyList []*Lobby
 var lobbyCount int = 0
 
-type Lobby struct {
+type Lobby struct { //{
 	Id int
 
 	Leader *Player
@@ -26,9 +26,9 @@ type Lobby struct {
 	// 0 Not Playing
 	// 1 Playing
 	// 2 Game finished
-}
+} //}
 
-func newLobby(leader *Player) (id int) {
+func newLobby(leader *Player) (id int) { //{
 	var lobby = &Lobby{
 		Players:    make(map[*Player]bool),
 		broadcast:  make(chan []byte),
@@ -44,9 +44,9 @@ func newLobby(leader *Player) (id int) {
 	lobbyList = append(lobbyList, lobby)
 	log.Println(lobbyList)
 	return id
-}
+} //}
 
-func (h *Lobby) run() {
+func (h *Lobby) run() { //{
 	for {
 		select {
 		case client := <-h.register:
@@ -67,5 +67,5 @@ func (h *Lobby) run() {
 			}
 		}
 	}
-}
-//vi:foldmethod=marker:foldmarker={//,}//:
+} //}
+// vim:foldmethod=marker:foldmarker=//{,//}:
