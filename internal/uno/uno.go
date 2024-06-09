@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -35,6 +34,9 @@ func Serve() {
 
 func serveIndex(w http.ResponseWriter, r *http.Request) { //{
 	cookie := checkForCookie(w, r)
+	if cookie == nil {
+		return
+	}
 	log.Println("serving /uno")
 
 	tmpl, err := template.ParseFiles("./web/static/uno/index.html")
@@ -43,8 +45,8 @@ func serveIndex(w http.ResponseWriter, r *http.Request) { //{
 		return
 	}
 
-	err = tmpl.Execute(w, playerList[cookie.Value].Name)
-	if err != nil {
+	tmpl_err := tmpl.Execute(w, playerList[cookie.Value].Name)
+	if tmpl_err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -85,13 +87,12 @@ func serveList(w http.ResponseWriter, r *http.Request) { //{
 func serveLogin(w http.ResponseWriter, r *http.Request) { //{
 	log.Println("serving /uno/login")
 	cookie, err := r.Cookie("unoName")
-	if err != nil || playerList[cookie.Value].Name == "" {
+	if err != nil || playerList[cookie.Value] == nil || playerList[cookie.Value].Name == "" {
 		err := r.ParseForm()
 		if err != nil {
 			log.Fatal("Error to parse form")
 		} else if r.Form.Get("name") != "" {
-			key := string(randomKey(24))
-			var newplayer *Player = &Player{lobby: make(map[int]*Lobby), send: make(chan map[int][]byte, 256), Name: r.Form.Get("name")}
+			newplayer, key := newPlayer(r.Form.Get("name"))
 			playerList[key] = newplayer
 			cookieNew := &http.Cookie{}
 			cookieNew.Name = "unoName"
@@ -113,6 +114,9 @@ func serveLogin(w http.ResponseWriter, r *http.Request) { //{
 
 func serveLogout(w http.ResponseWriter, r *http.Request) { //{
 	cookie := checkForCookie(w, r)
+	if cookie == nil {
+		return
+	}
 	log.Println("serving /uno/logout to \"", cookie.Value, "\"")
 
 	delete(playerList, cookie.Value)
@@ -131,16 +135,23 @@ func serveLogout(w http.ResponseWriter, r *http.Request) { //{
 
 func serveCreate(w http.ResponseWriter, r *http.Request) { //{
 	cookie := checkForCookie(w, r)
+	if cookie == nil {
+		return
+	}
 	log.Println("serving /uno/create to ", playerList[cookie.Value].Name)
 
-	lobbyId := strconv.Itoa(newLobby(playerList[cookie.Value]))
-	// log.Println("lobbyid", lobbyId)
+	lobby := newLobby(playerList[cookie.Value])
+	go lobby.run()
+	log.Printf("creating lobby %d", lobby.Id)
 
-	http.Redirect(w, r, "/uno/lobby/"+lobbyId, http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/uno/lobby/%v", lobby.Id), http.StatusSeeOther)
 } //}
 
 func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 	cookie := checkForCookie(w, r)
+	if cookie == nil {
+		return
+	}
 	id, _ := strconv.Atoi(r.PathValue("id"))
 	if lobbyCount <= id {
 		log.Println("invalid lobby")
@@ -157,14 +168,12 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 	log.Printf("serving /uno/lobby/%v to %v", id, playerList[cookie.Value].Name)
 
 	tmpl, err := template.ParseFiles("./web/static/uno/lobby.html")
-	log.Println("Parsing...")
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
 	err = tmpl.Execute(w, lobber)
-	log.Println("Executing...")
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -172,7 +181,10 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 } //}
 
 func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
-	// cookie := checkForCookie(w, r)
+	cookie := checkForCookie(w, r)
+	if cookie == nil {
+		return
+	}
 	id, _ := strconv.Atoi(r.PathValue("id"))
 	if lobbyCount <= id {
 		log.Println("invalid lobby")
@@ -185,38 +197,27 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
 		return
 	}
-	// player := playerList[cookie.Value].Name
-
-	// conn, err := upgrader.Upgrade(w, r, nil)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return
-	// }
-} //}
-
-func randomKey(len int) (key []byte) { //{
-	for i := 0; i < len; i++ {
-		excluded := []int{1, 26, 59}
-		random := randIntExclude(93, excluded)
-		key = append(key, byte(random+33))
+	conn, err := Upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Fatal(err)
+		return
 	}
-	return key
-} //}
 
-func randIntExclude(top int, excluded []int) (random int) { //{
-	random = (rand.Int() % top)
-	for _, v := range excluded {
-		if random == v {
-			return randIntExclude(top, excluded)
-		}
-	}
-	return
+	player := playerList[cookie.Value]
+	player.lobby[id] = lobber
+	player.conn[id] = conn
+	player.send[id] = make(chan []byte, 256)
+	player.lobby[id].register <- player
+
+	go player.writePump(id)
+	go player.readPump(id)
 } //}
 
 func checkForCookie(w http.ResponseWriter, r *http.Request) *http.Cookie { //{
 	cookie, err := r.Cookie("unoName")
-	if err != nil || playerList[cookie.Value].Name == "" {
+	if err != nil || playerList[cookie.Value] == nil || playerList[cookie.Value].Name == "" {
 		http.Redirect(w, r, "/uno/login", http.StatusSeeOther)
+		return nil
 	}
 	return cookie
 } //}

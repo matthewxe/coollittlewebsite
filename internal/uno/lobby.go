@@ -28,7 +28,7 @@ type Lobby struct { //{
 	// 2 Game finished
 } //}
 
-func newLobby(leader *Player) (id int) { //{
+func newLobby(leader *Player) *Lobby { //{
 	var lobby = &Lobby{
 		Players:    make(map[*Player]bool),
 		broadcast:  make(chan []byte),
@@ -39,11 +39,10 @@ func newLobby(leader *Player) (id int) { //{
 		Id:         lobbyCount,
 	}
 	lobby.Players[leader] = true
-	id = lobbyCount
 	lobbyCount++
 	lobbyList = append(lobbyList, lobby)
 	log.Println(lobbyList)
-	return id
+	return lobby
 } //}
 
 func (h *Lobby) run() { //{
@@ -54,14 +53,14 @@ func (h *Lobby) run() { //{
 		case client := <-h.unregister:
 			if _, ok := h.Players[client]; ok {
 				delete(h.Players, client)
-				close(client.send)
+				close(client.send[h.Id])
 			}
 		case message := <-h.broadcast:
 			for client := range h.Players {
 				select {
-				case client.send <- message:
+				case client.send[h.Id] <- message:
 				default:
-					close(client.send)
+					close(client.send[h.Id])
 					delete(h.Players, client)
 				}
 			}
