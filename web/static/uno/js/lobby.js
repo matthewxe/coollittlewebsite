@@ -1,4 +1,5 @@
 var conn;
+var id = document.getElementById("ws");
 
 if (window["WebSocket"]) {
         conn = websoccket_connect("wss");
@@ -8,7 +9,15 @@ if (window["WebSocket"]) {
 
 function websoccket_connect(ws) {
         console.log("trying to connect...");
-        conn = new WebSocket(ws + "://" + document.location.host + "/uno/game");
+        conn = new WebSocket(
+                ws +
+                        ":" +
+                        document.location.href.replace(
+                                document.location.protocol,
+                                "",
+                        ) +
+                        "/ws",
+        );
 
         conn.onclose = function (ev) {
                 console.log("onclose", ev);

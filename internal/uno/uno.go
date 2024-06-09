@@ -2,8 +2,6 @@ package uno
 
 import (
 	"coollittlewebsite/internal/serve/assets"
-	"coollittlewebsite/internal/uno/lobby"
-	"coollittlewebsite/internal/uno/player"
 	"fmt"
 	"html/template"
 	"log"
@@ -22,7 +20,8 @@ func Serve() {
 		})
 	http.HandleFunc("GET /uno/", assets.ServeAssets)
 
-	// Logging out
+	// Logging in and out
+	http.HandleFunc("GET /uno/login", serveLogin)
 	http.HandleFunc("GET /uno/logout", serveLogout)
 
 	// TODO: Creating a lobby
@@ -31,49 +30,12 @@ func Serve() {
 
 	// TODO: Serve a lobby
 	http.HandleFunc("GET /uno/lobby/{id}", serveLobby)
-	http.HandleFunc("GET /uno/lobby/{id}/ws", serveLobby)
-
-	// hub := newHub()
-	// go hub.run()
-	//
-	// http.HandleFunc("GET /uno/ws", func(w http.ResponseWriter, r *http.Request) {
-	// 	serveWs(hub, w, r)
-	// })
-	// http.HandleFunc("GET /uno/", func(w http.ResponseWriter, r *http.Request) {
-	// 	assets.ServeAssets(w, r, "/uno", "/uno")
-	// })
+	http.HandleFunc("GET /uno/lobby/{id}/ws", serveLobbyWs)
 }
 
-func serveIndex(w http.ResponseWriter, r *http.Request) { // {{{
+func serveIndex(w http.ResponseWriter, r *http.Request) { //{
+	cookie := checkForCookie(w, r)
 	log.Println("serving /uno")
-	cookie, err := r.Cookie("unoName")
-
-	if err != nil || player.PlayerList[cookie.Value].Name == "" {
-		err := r.ParseForm()
-		if err != nil {
-			log.Fatal("Error to parse form")
-			return
-		}
-		if r.Form.Get("name") != "" {
-			key := string(randomKey(24))
-			var newplyear player.Player
-			newplyear.Name = r.Form.Get("name")
-			player.PlayerList[key] = newplyear
-			cookieNew := &http.Cookie{}
-			cookieNew.Name = "unoName"
-			cookieNew.Value = key
-			cookieNew.Expires = time.Now().Add(365 * 24 * time.Hour) // After 1 year
-			// cookie.Secure = true
-			cookieNew.Secure = false
-			cookieNew.HttpOnly = true
-			cookieNew.Path = "/uno"
-			http.SetCookie(w, cookieNew)
-			cookie = cookieNew
-		} else {
-			http.ServeFile(w, r, "./web/static/uno/name.html")
-			return
-		}
-	}
 
 	tmpl, err := template.ParseFiles("./web/static/uno/index.html")
 	if err != nil {
@@ -81,19 +43,19 @@ func serveIndex(w http.ResponseWriter, r *http.Request) { // {{{
 		return
 	}
 
-	err = tmpl.Execute(w, player.PlayerList[cookie.Value].Name)
+	err = tmpl.Execute(w, playerList[cookie.Value].Name)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-} // }}}
+} //}
 
-func serveList(w http.ResponseWriter, r *http.Request) { // {{{
+func serveList(w http.ResponseWriter, r *http.Request) { //{
 	checkForCookie(w, r)
 	var ready string
 	var ongoing string
 	var done string
-	for i, lobbi := range lobby.LobbyList {
+	for i, lobbi := range lobbyList {
 		out := fmt.Sprintf("<li>%v. ", i+1)
 		out += lobbi.Leader.Name + "(leader)"
 		for player := range lobbi.Players {
@@ -118,23 +80,42 @@ func serveList(w http.ResponseWriter, r *http.Request) { // {{{
 		log.Fatal(err)
 		return
 	}
-} // }}}
+} //}
 
-func serveCreate(w http.ResponseWriter, r *http.Request) { // {{{
-	cookie := checkForCookie(w, r)
-	log.Println("serving /uno/create to ", player.PlayerList[cookie.Value].Name)
+func serveLogin(w http.ResponseWriter, r *http.Request) { //{
+	log.Println("serving /uno/login")
+	cookie, err := r.Cookie("unoName")
+	if err != nil || playerList[cookie.Value].Name == "" {
+		err := r.ParseForm()
+		if err != nil {
+			log.Fatal("Error to parse form")
+		} else if r.Form.Get("name") != "" {
+			key := string(randomKey(24))
+			var newplayer *Player = &Player{lobby: make(map[int]*Lobby), send: make(chan map[int][]byte, 256), Name: r.Form.Get("name")}
+			playerList[key] = newplayer
+			cookieNew := &http.Cookie{}
+			cookieNew.Name = "unoName"
+			cookieNew.Value = key
+			cookieNew.Expires = time.Now().Add(365 * 24 * time.Hour) // After 1 year
+			// cookie.Secure = true
+			cookieNew.Secure = false
+			cookieNew.HttpOnly = true
+			cookieNew.Path = "/uno"
+			http.SetCookie(w, cookieNew)
+			cookie = cookieNew
+		} else {
+			http.ServeFile(w, r, "./web/static/uno/name.html")
+			return
+		}
+	}
+	http.Redirect(w, r, "/uno", http.StatusSeeOther)
+} //}
 
-	lobbyId := strconv.Itoa(lobby.NewLobby(player.PlayerList[cookie.Value]))
-	// log.Println("lobbyid", lobbyId)
-
-	http.Redirect(w, r, "/uno/lobby/"+lobbyId, http.StatusSeeOther)
-} // }}}
-
-func serveLogout(w http.ResponseWriter, r *http.Request) { // {{{
+func serveLogout(w http.ResponseWriter, r *http.Request) { //{
 	cookie := checkForCookie(w, r)
 	log.Println("serving /uno/logout to \"", cookie.Value, "\"")
 
-	delete(player.PlayerList, cookie.Value)
+	delete(playerList, cookie.Value)
 	c := &http.Cookie{
 		Name:     "unoName",
 		Value:    "",
@@ -146,15 +127,34 @@ func serveLogout(w http.ResponseWriter, r *http.Request) { // {{{
 	http.SetCookie(w, c)
 	log.Println("")
 	http.Redirect(w, r, "/uno", http.StatusSeeOther)
-} // }}}
+} //}
 
-func serveLobby(w http.ResponseWriter, r *http.Request) { // {{{
+func serveCreate(w http.ResponseWriter, r *http.Request) { //{
+	cookie := checkForCookie(w, r)
+	log.Println("serving /uno/create to ", playerList[cookie.Value].Name)
+
+	lobbyId := strconv.Itoa(newLobby(playerList[cookie.Value]))
+	// log.Println("lobbyid", lobbyId)
+
+	http.Redirect(w, r, "/uno/lobby/"+lobbyId, http.StatusSeeOther)
+} //}
+
+func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 	cookie := checkForCookie(w, r)
 	id, _ := strconv.Atoi(r.PathValue("id"))
-	if lobby.LobbyCount > id {
+	if lobbyCount <= id {
+		log.Println("invalid lobby")
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
+		return
 	}
-	log.Printf("serving /uno/lobby/%v to %v", id, player.PlayerList[cookie.Value].Name)
+	lobber := lobbyList[id]
+	if lobber.State != 0 {
+		log.Println("invalid lobby")
+		http.Redirect(w, r, "/uno", http.StatusSeeOther)
+		return
+	}
+
+	log.Printf("serving /uno/lobby/%v to %v", id, playerList[cookie.Value].Name)
 
 	tmpl, err := template.ParseFiles("./web/static/uno/lobby.html")
 	log.Println("Parsing...")
@@ -163,24 +163,47 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { // {{{
 		return
 	}
 
-	err = tmpl.Execute(w, player.PlayerList[cookie.Value].Name)
+	err = tmpl.Execute(w, lobber)
 	log.Println("Executing...")
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-} // }}}
+} //}
 
-func randomKey(len int) (key []byte) { // {{{
+func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
+	// cookie := checkForCookie(w, r)
+	id, _ := strconv.Atoi(r.PathValue("id"))
+	if lobbyCount <= id {
+		log.Println("invalid lobby")
+		http.Redirect(w, r, "/uno", http.StatusSeeOther)
+		return
+	}
+	lobber := lobbyList[id]
+	if lobber.State != 0 {
+		log.Println("invalid lobby")
+		http.Redirect(w, r, "/uno", http.StatusSeeOther)
+		return
+	}
+	// player := playerList[cookie.Value].Name
+
+	// conn, err := upgrader.Upgrade(w, r, nil)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
+} //}
+
+func randomKey(len int) (key []byte) { //{
 	for i := 0; i < len; i++ {
 		excluded := []int{1, 26, 59}
 		random := randIntExclude(93, excluded)
 		key = append(key, byte(random+33))
 	}
 	return key
-}
+} //}
 
-func randIntExclude(top int, excluded []int) (random int) {
+func randIntExclude(top int, excluded []int) (random int) { //{
 	random = (rand.Int() % top)
 	for _, v := range excluded {
 		if random == v {
@@ -188,12 +211,13 @@ func randIntExclude(top int, excluded []int) (random int) {
 		}
 	}
 	return
-} // }}}
+} //}
 
-func checkForCookie(w http.ResponseWriter, r *http.Request) *http.Cookie { // {{{
+func checkForCookie(w http.ResponseWriter, r *http.Request) *http.Cookie { //{
 	cookie, err := r.Cookie("unoName")
-	if err != nil || player.PlayerList[cookie.Value].Name == "" {
-		http.Redirect(w, r, "/uno", http.StatusSeeOther)
+	if err != nil || playerList[cookie.Value].Name == "" {
+		http.Redirect(w, r, "/uno/login", http.StatusSeeOther)
 	}
 	return cookie
-} // }}}
+} //}
+// vim:foldmethod=marker:foldmarker=//{,//}:

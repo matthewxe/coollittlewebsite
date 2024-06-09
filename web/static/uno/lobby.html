@@ -3,14 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script defer src="uno/js/lobby.js"></script>
+    <script defer src="/uno/js/lobby.js"></script>
   </head>
   <body>
+    <h1 id="ws">Websocket status:</h1>
     <button onmousedown="window.location.href = '/uno';">Go back</button>
-    <h1>Lobby {{.}}</h1>
+    <h1>Lobby {{.Id}}</h1>
+    <h2>State: {{.State}}</h2>
     <h2>Players:</h2>
     <ul>
-      <!--{{.}}-->
+      {{range $player, $inside := .Players}}
+      <li>{{$player.Name}}</li>
+      {{else}} T0 {{end}}
     </ul>
   </body>
 </html>
