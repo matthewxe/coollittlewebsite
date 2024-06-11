@@ -21,7 +21,7 @@ document.getElementById("form").onsubmit = function () {
 };
 
 if (window["WebSocket"]) {
-        conn = websocket_connect("ws");
+        conn = websocket_connect("wss");
 } else {
         wslog("Your browser does not support websockets");
 }
@@ -53,7 +53,7 @@ function websocket_connect(ws) {
 
         conn.onerror = function (ev) {
                 wslog("oopsie dasies ", ev);
-                conn = websocket_connect("ws");
+                conn = websocket_connect("wss");
         };
         return conn;
 }
