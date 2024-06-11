@@ -25,7 +25,7 @@ type Player struct { //{
 } //}
 
 func newPlayer(name string) (*Player, string) {
-	newplayer := &Player{lobby: make(map[int]*Lobby), send: make(map[int]chan []byte, 256), Name: name, conn: make(map[int]*websocket.Conn)}
+	newplayer := &Player{lobby: make(map[int]*Lobby), send: make(map[int]chan []byte), Name: name, conn: make(map[int]*websocket.Conn)}
 	key := randomKey(24)
 	return newplayer, key
 }
@@ -77,28 +77,31 @@ var Upgrader = websocket.Upgrader{
 // Player is a middleman between the websocket connection and the lobby.
 
 // readPump pumps messages from the websocket connection to the lobby.
-
+//
 // The application runs readPump in a per-connection goroutine. The application
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
-func (p *Player) readPump(id int) { //{
+func (player *Player) readPump(id int) { //{
 	defer func() {
-		p.lobby[id].unregister <- p
-		p.conn[id].Close()
+		player.lobby[id].unregister <- player
+		player.conn[id].Close()
 	}()
-	p.conn[id].SetReadLimit(maxMessageSize)
-	p.conn[id].SetReadDeadline(time.Now().Add(pongWait))
-	p.conn[id].SetPongHandler(func(string) error { p.conn[id].SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	player.conn[id].SetReadLimit(maxMessageSize)
+	player.conn[id].SetReadDeadline(time.Now().Add(pongWait))
+	player.conn[id].SetPongHandler(func(string) error { player.conn[id].SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
-		_, message, err := p.conn[id].ReadMessage()
+		_, message, err := player.conn[id].ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
+
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		p.lobby[id].broadcast <- message
+		log.Printf("Recieved message from %s -> lobby %v with the message %s", player.Name, id, message)
+		player.lobby[id].broadcast <- message
 	}
 } //}
 
@@ -107,41 +110,43 @@ func (p *Player) readPump(id int) { //{
 // A goroutine running writePump is started for each connection. The
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
-func (c *Player) writePump(id int) { //{
+func (player *Player) writePump(id int) { //{
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn[id].Close()
+		player.conn[id].Close()
 	}()
 	for {
 		select {
-		case message, ok := <-c.send[id]:
-			c.conn[id].SetWriteDeadline(time.Now().Add(writeWait))
+		case message, ok := <-player.send[id]:
+			log.Printf("Recieved message from lobby %v -> %s with the message %s", id, player.Name, message)
+			player.conn[id].SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The lobby closed the channel.
-				c.conn[id].WriteMessage(websocket.CloseMessage, []byte{})
+				player.conn[id].WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn[id].NextWriter(websocket.TextMessage)
+			w, err := player.conn[id].NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
+			n := len(player.send[id])
 			for i := 0; i < n; i++ {
 				w.Write(newline)
-				w.Write(<-c.send[id])
+				w.Write(<-player.send[id])
 			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			c.conn[id].SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn[id].WriteMessage(websocket.PingMessage, nil); err != nil {
+			log.Printf("%s got ticked off in lobby %v", player.Name, id)
+			player.conn[id].SetWriteDeadline(time.Now().Add(writeWait))
+			if err := player.conn[id].WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}

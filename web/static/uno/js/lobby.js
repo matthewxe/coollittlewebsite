@@ -23,12 +23,11 @@ document.getElementById("form").onsubmit = function () {
 if (window["WebSocket"]) {
         conn = websocket_connect("ws");
 } else {
-        wslog("your browser does not support websockets");
+        wslog("Your browser does not support websockets");
 }
 
 function websocket_connect(ws) {
-        wslog("trying to connect...");
-
+        wslog("Trying to connect");
         conn = new WebSocket(
                 ws +
                         ":" +

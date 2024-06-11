@@ -1,6 +1,8 @@
 package uno
 
-import "log"
+import (
+	"log"
+)
 
 var lobbyList []*Lobby
 var lobbyCount int = 0
@@ -42,31 +44,39 @@ func newLobby(leader *Player) *Lobby { //{
 		State:      0,
 		Id:         lobbyCount,
 	}
-	lobby.Players[leader] = true
+	lobby.Players[leader] = false
 	lobbyCount++
 	lobbyList = append(lobbyList, lobby)
 	log.Println(lobbyList)
+
+	leader.send[lobby.Id] = make(chan []byte, 256)
 	return lobby
 } //}
 
-func (h *Lobby) run() { //{
+func (lobby *Lobby) run() { //{
 	for {
 		select {
-		case client := <-h.register:
-			h.Players[client] = true
-		case client := <-h.unregister:
-			if _, ok := h.Players[client]; !ok {
-				h.Players[client] = false
+		case player := <-lobby.register:
+			log.Printf("%s registered [lobby %v]", player.Name, lobby.Id)
+			lobby.Players[player] = true
+		case player := <-lobby.unregister:
+			if _, ok := lobby.Players[player]; ok {
 				// delete(h.Players, client)
-				close(client.send[h.Id])
+				log.Printf("%s unregistered [lobby %v]", player.Name, lobby.Id)
+				lobby.Players[player] = false
+				close(player.send[lobby.Id])
 			}
-		case message := <-h.broadcast:
-			for client := range h.Players {
+		case message := <-lobby.broadcast:
+			for player := range lobby.Players {
+				log.Printf("Lobby.broadcast list players: %s", player.Name)
 				select {
-				case client.send[h.Id] <- message:
+				case player.send[lobby.Id] <- message:
+					log.Printf("%s messaged [lobby %v]: '%s'", player.Name, lobby.Id, message)
 				default:
-					close(client.send[h.Id])
-					delete(h.Players, client)
+					// delete(lobby.players, player)
+					log.Printf("%s failed to message and unregistered [lobby %v]", player.Name, lobby.Id)
+					lobby.Players[player] = false
+					close(player.send[lobby.Id])
 				}
 			}
 		}
