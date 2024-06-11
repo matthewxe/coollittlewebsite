@@ -6,7 +6,11 @@
     <script defer src="/uno/js/lobby.js"></script>
   </head>
   <body>
-    <h1 id="ws">Websocket status:</h1>
+    <h1>
+      Websocket status:
+      <span id="ws"></span>
+      <button onmousedown="conn = websocket_connect('ws')">reload</button>
+    </h1>
     <button onmousedown="window.location.href = '/uno';">Go back</button>
     <h1>Lobby {{.Id}}</h1>
     <h2>State: {{.State}}</h2>
@@ -20,8 +24,8 @@
     <h3>Chat</h3>
     <div id="log">
       <form id="form">
-        <input type="submit" value="Send" />
         <input type="text" id="msg" size="64" autofocus />
+        <input type="submit" value="Send" />
       </form>
     </div>
   </body>

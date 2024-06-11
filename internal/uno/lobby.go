@@ -8,8 +8,12 @@ var lobbyCount int = 0
 type Lobby struct { //{
 	Id int
 
+	// Leader also exists in the Players map
 	Leader *Player
 
+	// This if a *Player exists in a map it means it is inside a lobby so it
+	// Has joined the lobby
+	// But true means that ists connected by websocket, and false means no
 	Players map[*Player]bool
 
 	// Inbound messages from the clients.
@@ -51,8 +55,9 @@ func (h *Lobby) run() { //{
 		case client := <-h.register:
 			h.Players[client] = true
 		case client := <-h.unregister:
-			if _, ok := h.Players[client]; ok {
-				delete(h.Players, client)
+			if _, ok := h.Players[client]; !ok {
+				h.Players[client] = false
+				// delete(h.Players, client)
 				close(client.send[h.Id])
 			}
 		case message := <-h.broadcast:

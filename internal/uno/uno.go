@@ -23,21 +23,21 @@ func Serve() {
 	http.HandleFunc("GET /uno/login", serveLogin)
 	http.HandleFunc("GET /uno/logout", serveLogout)
 
-	// TODO: Creating a lobby
+	// Creating a lobby
 	http.HandleFunc("GET /uno/create", serveCreate)
 	http.HandleFunc("GET /uno/list", serveList)
 
-	// TODO: Serve a lobby
+	// Serve a lobby
 	http.HandleFunc("GET /uno/lobby/{id}", serveLobby)
 	http.HandleFunc("GET /uno/lobby/{id}/ws", serveLobbyWs)
 }
 
 func serveIndex(w http.ResponseWriter, r *http.Request) { //{
-	cookie := checkForCookie(w, r)
-	if cookie == nil {
+	player, _ := checkLogin(w, r)
+	if player == nil {
 		return
 	}
-	log.Println("serving /uno")
+	log.Println("serving /uno to")
 
 	tmpl, err := template.ParseFiles("./web/static/uno/index.html")
 	if err != nil {
@@ -45,7 +45,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) { //{
 		return
 	}
 
-	tmpl_err := tmpl.Execute(w, playerList[cookie.Value].Name)
+	tmpl_err := tmpl.Execute(w, player.Name)
 	if tmpl_err != nil {
 		log.Fatal(err)
 		return
@@ -53,18 +53,23 @@ func serveIndex(w http.ResponseWriter, r *http.Request) { //{
 } //}
 
 func serveList(w http.ResponseWriter, r *http.Request) { //{
-	checkForCookie(w, r)
+	checkLogin(w, r)
 	var ready string
 	var ongoing string
 	var done string
 	for i, lobbi := range lobbyList {
-		out := fmt.Sprintf("<li>%v. ", i+1)
-		out += lobbi.Leader.Name + "(leader)"
+		var players string
 		for player := range lobbi.Players {
-			out += ", "
-			out += player.Name
+			if player.Name != lobbi.Leader.Name {
+				players += ", "
+				players += player.Name
+			}
 		}
-		out += fmt.Sprintf("  <button onmousedown=\"window.location.href = '/uno/lobby/ %v';\">Join</button></li>", i)
+		out := fmt.Sprintf(`
+			<li>%v. %s (leader)%s <button
+			onmousedown="window.location.href = '/uno/lobby/%v';">
+			Join</button></li>`,
+			i+1, lobbi.Leader.Name, players, i)
 
 		switch lobbi.State {
 		case 0:
@@ -113,7 +118,7 @@ func serveLogin(w http.ResponseWriter, r *http.Request) { //{
 } //}
 
 func serveLogout(w http.ResponseWriter, r *http.Request) { //{
-	cookie := checkForCookie(w, r)
+	_, cookie := checkLogin(w, r)
 	if cookie == nil {
 		return
 	}
@@ -134,13 +139,13 @@ func serveLogout(w http.ResponseWriter, r *http.Request) { //{
 } //}
 
 func serveCreate(w http.ResponseWriter, r *http.Request) { //{
-	cookie := checkForCookie(w, r)
-	if cookie == nil {
+	player, _ := checkLogin(w, r)
+	if player == nil {
 		return
 	}
-	log.Println("serving /uno/create to ", playerList[cookie.Value].Name)
+	log.Println("serving /uno/create to ", player.Name)
 
-	lobby := newLobby(playerList[cookie.Value])
+	lobby := newLobby(player)
 	go lobby.run()
 	log.Printf("creating lobby %d", lobby.Id)
 
@@ -148,8 +153,8 @@ func serveCreate(w http.ResponseWriter, r *http.Request) { //{
 } //}
 
 func serveLobby(w http.ResponseWriter, r *http.Request) { //{
-	cookie := checkForCookie(w, r)
-	if cookie == nil {
+	player, _ := checkLogin(w, r)
+	if player == nil {
 		return
 	}
 	id, _ := strconv.Atoi(r.PathValue("id"))
@@ -165,7 +170,11 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 		return
 	}
 
-	log.Printf("serving /uno/lobby/%v to %v", id, playerList[cookie.Value].Name)
+	log.Printf("serving /uno/lobby/%v to %v", id, player.Name)
+
+	if _, ok := lobber.Players[player]; !ok {
+		lobber.Players[player] = false
+	}
 
 	tmpl, err := template.ParseFiles("./web/static/uno/lobby.html")
 	if err != nil {
@@ -181,8 +190,8 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 } //}
 
 func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
-	cookie := checkForCookie(w, r)
-	if cookie == nil {
+	player, _ := checkLogin(w, r)
+	if player == nil {
 		return
 	}
 	id, _ := strconv.Atoi(r.PathValue("id"))
@@ -203,7 +212,6 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 		return
 	}
 
-	player := playerList[cookie.Value]
 	player.lobby[id] = lobber
 	player.conn[id] = conn
 	player.send[id] = make(chan []byte, 256)
@@ -213,12 +221,17 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 	go player.readPump(id)
 } //}
 
-func checkForCookie(w http.ResponseWriter, r *http.Request) *http.Cookie { //{
+func checkLogin(w http.ResponseWriter, r *http.Request) (*Player, *http.Cookie) { //{
 	cookie, err := r.Cookie("unoName")
-	if err != nil || playerList[cookie.Value] == nil || playerList[cookie.Value].Name == "" {
+	if err != nil {
 		http.Redirect(w, r, "/uno/login", http.StatusSeeOther)
-		return nil
+		return nil, nil
 	}
-	return cookie
+	player := playerList[cookie.Value]
+	if player == nil || player.Name == "" {
+		http.Redirect(w, r, "/uno/login", http.StatusSeeOther)
+		return nil, nil
+	}
+	return player, cookie
 } //}
 // vim:foldmethod=marker:foldmarker=//{,//}:

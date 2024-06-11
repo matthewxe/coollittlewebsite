@@ -1,45 +1,11 @@
 var conn;
-var id = document.getElementById("ws");
+var wsstatus = document.getElementById("ws");
 var msg = document.getElementById("msg");
 var log = document.getElementById("log");
 
-/*if (window["WebSocket"]) {
-        conn = websoccket_connect("wss");
-} else {
-        console.log("your browser does not support websockets");
-}
-
-function websoccket_connect(ws) {
-        console.log("trying to connect...");
-        conn = new WebSocket(
-                ws +
-                        ":" +
-                        document.location.href.replace(
-                                document.location.protocol,
-                                "",
-                        ) +
-                        "/ws",
-        );
-
-        conn.onclose = function (ev) {
-                console.log("onclose", ev);
-        };
-        conn.onmessage = function (ev) {
-                console.log("onmessage", ev);
-        };
-        conn.onerror = function (ev) {
-                console.log("oopsie dasies ", ev);
-                conn = websoccket_connect("ws");
-        };
-        return conn;
-}*/
-
-function appendLog(item) {
-        var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
-        log.appendChild(item);
-        if (doScroll) {
-                log.scrollTop = log.scrollHeight - log.clientHeight;
-        }
+function wslog(message, ev) {
+        wsstatus.innerHTML = message;
+        console.log(message, ev);
 }
 
 document.getElementById("form").onsubmit = function () {
@@ -55,29 +21,48 @@ document.getElementById("form").onsubmit = function () {
 };
 
 if (window["WebSocket"]) {
+        conn = websocket_connect("ws");
+} else {
+        wslog("your browser does not support websockets");
+}
+
+function websocket_connect(ws) {
+        wslog("trying to connect...");
+
         conn = new WebSocket(
-                "wss:" +
+                ws +
+                        ":" +
                         document.location.href.replace(
                                 document.location.protocol,
                                 "",
                         ) +
                         "/ws",
         );
-        conn.onclose = function (evt) {
-                var item = document.createElement("div");
-                item.innerHTML = "<b>Connection closed.</b>";
-                appendLog(item);
+
+        conn.onclose = function (ev) {
+                wslog("Connection closed", ev);
         };
-        conn.onmessage = function (evt) {
-                var messages = evt.data.split("\n");
+        conn.onmessage = function (ev) {
+                wslog("New message", ev);
+                var messages = ev.data.split("\n");
                 for (var i = 0; i < messages.length; i++) {
                         var item = document.createElement("div");
                         item.innerText = messages[i];
                         appendLog(item);
                 }
         };
-} else {
-        var item = document.createElement("div");
-        item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
-        appendLog(item);
+
+        conn.onerror = function (ev) {
+                wslog("oopsie dasies ", ev);
+                conn = websocket_connect("ws");
+        };
+        return conn;
+}
+
+function appendLog(item) {
+        var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+        log.appendChild(item);
+        if (doScroll) {
+                log.scrollTop = log.scrollHeight - log.clientHeight;
+        }
 }
