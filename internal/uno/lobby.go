@@ -21,6 +21,7 @@ type Lobby struct { //{
 	// Inbound messages from the clients.
 	broadcast chan []byte
 
+	logs [][]byte
 	// Register requests from the clients.
 	register chan *Player
 
@@ -57,24 +58,31 @@ func (lobby *Lobby) run() { //{
 	for {
 		select {
 		case player := <-lobby.register:
-			log.Printf("%s registered [lobby %v]", player.Name, lobby.Id)
+			// log.Printf("%s registered [lobby %v]", player.Name, lobby.Id)
+			for _, v := range lobby.logs {
+				player.send[lobby.Id] <- v
+				log.Printf("%s", v)
+			}
 			lobby.Players[player] = true
 		case player := <-lobby.unregister:
 			if _, ok := lobby.Players[player]; ok {
 				// delete(h.Players, client)
-				log.Printf("%s unregistered [lobby %v]", player.Name, lobby.Id)
+				// log.Printf("%s unregistered [lobby %v]", player.Name, lobby.Id)
 				lobby.Players[player] = false
-				close(player.send[lobby.Id])
+				if _, ok := player.send[lobby.Id]; !ok {
+					close(player.send[lobby.Id])
+				}
 			}
 		case message := <-lobby.broadcast:
+			lobby.logs = append(lobby.logs, message)
 			for player := range lobby.Players {
-				log.Printf("Lobby.broadcast list players: %s", player.Name)
+				// log.Printf("Lobby.broadcast list players: %s", player.Name)
 				select {
 				case player.send[lobby.Id] <- message:
-					log.Printf("%s messaged [lobby %v]: '%s'", player.Name, lobby.Id, message)
+					// log.Printf("%s messaged [lobby %v]: '%s'", player.Name, lobby.Id, message)
 				default:
 					// delete(lobby.players, player)
-					log.Printf("%s failed to message and unregistered [lobby %v]", player.Name, lobby.Id)
+					// log.Printf("%s failed to message and unregistered [lobby %v]", player.Name, lobby.Id)
 					lobby.Players[player] = false
 					close(player.send[lobby.Id])
 				}

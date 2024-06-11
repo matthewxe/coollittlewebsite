@@ -163,8 +163,8 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
 		return
 	}
-	lobber := lobbyList[id]
-	if lobber.State != 0 {
+	lobby := lobbyList[id]
+	if lobby.State != 0 {
 		log.Println("invalid lobby")
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
 		return
@@ -172,8 +172,8 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 
 	log.Printf("serving /uno/lobby/%v to %v", id, player.Name)
 
-	if _, ok := lobber.Players[player]; !ok {
-		lobber.Players[player] = false
+	if _, ok := lobby.Players[player]; !ok {
+		lobby.Players[player] = false
 	}
 
 	tmpl, err := template.ParseFiles("./web/static/uno/lobby.html")
@@ -182,7 +182,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 		return
 	}
 
-	err = tmpl.Execute(w, lobber)
+	err = tmpl.Execute(w, lobby)
 	if err != nil {
 		log.Fatal(err)
 		return
