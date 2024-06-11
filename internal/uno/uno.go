@@ -37,7 +37,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) { //{
 	if player == nil {
 		return
 	}
-	log.Println("serving /uno to")
+	log.Println("serving /uno to ", player.Name)
 
 	tmpl, err := template.ParseFiles("./web/static/uno/index.html")
 	if err != nil {

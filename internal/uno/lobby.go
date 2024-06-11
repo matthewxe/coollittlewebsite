@@ -84,7 +84,9 @@ func (lobby *Lobby) run() { //{
 					// delete(lobby.players, player)
 					// log.Printf("%s failed to message and unregistered [lobby %v]", player.Name, lobby.Id)
 					lobby.Players[player] = false
-					close(player.send[lobby.Id])
+					if _, ok := player.send[lobby.Id]; !ok {
+						close(player.send[lobby.Id])
+					}
 				}
 			}
 		}
