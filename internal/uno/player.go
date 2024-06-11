@@ -103,7 +103,7 @@ func (player *Player) readPump(id int) { //{
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		log.Printf("Recieved message from %s -> lobby %v with the message %s", player.Name, id, message)
 
-		player.lobby[id].broadcast <- slices.Concat([]byte(player.Name), message)
+		player.lobby[id].broadcast <- slices.Concat([]byte(player.Name+": "), message)
 	}
 } //}
 
