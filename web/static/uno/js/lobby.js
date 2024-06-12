@@ -2,13 +2,16 @@ var conn;
 var wsstatus = document.getElementById("ws");
 var msg = document.getElementById("msg");
 var log = document.getElementById("log");
-const websockettype = "wss";
+var state = document.getElementById("state");
+var players = document.getElementById("players");
+const websockettype = "ws";
 
 function wslog(message, ev) {
         wsstatus.innerText = message;
         console.log(message, ev);
 }
 
+// Log //{{{
 document.getElementById("form").onsubmit = function () {
         if (!conn) {
                 return false;
@@ -25,14 +28,16 @@ document.getElementById("form").onsubmit = function () {
         conn.send(JSON.stringify(json));
         msg.value = "";
         return false;
-};
+}; //}}}
 
+// Check if websockets work {{{
 if (window["WebSocket"]) {
         conn = websocket_connect(websockettype);
 } else {
         wslog("Your browser does not support websockets");
-}
+} //}}}
 
+// Websocket function{{{
 function websocket_connect(ws) {
         wslog("Trying to connect");
         conn = new WebSocket(
@@ -48,34 +53,88 @@ function websocket_connect(ws) {
         conn.onclose = function (ev) {
                 wslog("Connection closed", ev);
         };
-        conn.onmessage = function (ev) {
-                wslog("New message", ev);
-                var messages = ev.data.split("\n");
-                for (var i = 0; i < messages.length; i++) {
-                        const msg = JSON.parse(messages[i]);
-                        console.log("JDSL", msg);
-                        const time = new Date(msg.Date);
-                        const timeStr = time.toLocaleTimeString();
-
-                        var item = document.createElement("div");
-                        item.innerText =
-                                timeStr + " " + msg.Player + ": " + msg.Text;
-
-                        appendLog(item);
-                }
-        };
+        conn.onmessage = on_message;
 
         conn.onerror = function (ev) {
                 wslog("oopsie dasies ", ev);
                 conn = websocket_connect(websockettype);
         };
         return conn;
-}
+} //}}}
 
+// Appendlog{{{
 function appendLog(item) {
         var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
         log.appendChild(item);
         if (doScroll) {
                 log.scrollTop = log.scrollHeight - log.clientHeight;
         }
+} //}}}
+
+//Handle incoming messages{{{
+function on_message(ev) {
+        wslog("New message", ev);
+        const json = JSON.parse(ev.data);
+        console.log("OnMessage", json);
+
+        switch (json.Type) {
+                case "status":
+                        return handleLobbyUpdate(json);
+                case "message":
+                        return handleMessages(json);
+                case "messagelog":
+                        return handleMessagesLog(json);
+        }
+} //}}}
+
+function handleLobbyUpdate(json) {
+        console.log("LobbyUpdate");
+        //if (json.Id != document.getElementById("id").innerHTML) {
+        //        return;
+        //}
+        state.innerHTML = json.State;
+        players.innerHTML = "";
+        players.innerHTML += `<li>${handlePlayer(json.Leader, true)}</li>`;
+
+        for (let index = 0; index < json.Players.length; index++) {
+                const element = handlePlayer(json.Players[index], false);
+                players.innerHTML += `<li>${element}</li>`;
+        }
+}
+
+// Does not include leader
+function handlePlayer(player, isleader) {
+        var out = player.Name;
+        if (isleader) {
+                out += " (leader)";
+        }
+        if (player.Current) {
+                out += " (you)";
+        }
+        if (player.Active) {
+                out += " /";
+        } else {
+                out += " X";
+        }
+        return out;
+}
+
+function handleMessages(json) {
+        console.log("Message");
+        const time = new Date(json.Date);
+        const timeStr = time.toLocaleTimeString();
+
+        var item = document.createElement("div");
+        /* dont worry its sanitized (i think) */
+        item.innerHTML = timeStr + " <b>" + json.Player + "</b>: " + json.Text;
+
+        appendLog(item);
+        //var messages = ev.data.split("\n");
+        //for (var i = 0; i < messages.length; i++) {
+        //        console.log("JDSL", json);
+        //}
+}
+
+function handleMessagesLog(json) {
+        console.log("MessageLog");
 }

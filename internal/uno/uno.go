@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"coollittlewebsite/internal/serve/assets"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strconv"
+	"text/template"
 	"time"
 )
 
-func Serve() {
+func Serve() { // //{
 	// Main page and assets
 	http.HandleFunc("GET /uno", serveIndex)
 	http.HandleFunc("GET /uno/{$}",
@@ -31,7 +31,7 @@ func Serve() {
 	// Serve a lobby
 	http.HandleFunc("GET /uno/lobby/{id}", serveLobby)
 	http.HandleFunc("GET /uno/lobby/{id}/ws", serveLobbyWs)
-}
+} // //}
 
 func serveIndex(w http.ResponseWriter, r *http.Request) { //{
 	player, _ := checkLogin(w, r)
@@ -193,7 +193,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 		return
 	}
 
-	err = tmpl.Execute(w, lobby)
+	err = tmpl.Execute(w, lobby.Jsonify(player))
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -225,7 +225,7 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 
 	player.lobby[id] = lobber
 	player.conn[id] = conn
-	player.send[id] = make(chan Message, 256)
+	player.send[id] = make(chan []byte, 256)
 	player.lobby[id].register <- player
 
 	go player.writePump(id)

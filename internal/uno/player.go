@@ -1,11 +1,10 @@
 package uno
 
 import (
-	// "bytes"
-	"encoding/json"
+	// "encoding/json"
+	"html"
 	"log"
 	"math/rand"
-	// "slices"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -23,11 +22,16 @@ type Player struct { //{
 	conn map[int]*websocket.Conn
 
 	// Buffered channel of outbound messages.
-	send map[int]chan Message
+	// Formatted in JSON
+	// Use DecodeJSON() to get the corresponding struct
+	send map[int]chan []byte
 } //}
 
 func newPlayer(name string) (*Player, string) { //{
-	newplayer := &Player{lobby: make(map[int]*Lobby), send: make(map[int]chan Message), Name: name, conn: make(map[int]*websocket.Conn)}
+	newplayer := &Player{lobby: make(map[int]*Lobby),
+		send: make(map[int]chan []byte),
+		Name: html.EscapeString(name),
+		conn: make(map[int]*websocket.Conn)}
 	var len int = 24
 	var key []byte
 	for i := 0; i < len; i++ {
@@ -49,13 +53,6 @@ func randIntExclude(top int, excluded []int) (random int) { //{
 	}
 	return
 } //}
-
-type Message struct {
-	Player string
-	Type   string
-	Text   string
-	Date   int
-}
 
 const ( //{
 	// Time allowed to write a message to the peer.
@@ -94,26 +91,24 @@ func (player *Player) readPump(id int) { //{
 	}()
 	player.conn[id].SetReadLimit(maxMessageSize)
 	player.conn[id].SetReadDeadline(time.Now().Add(pongWait))
-	player.conn[id].SetPongHandler(func(string) error { player.conn[id].SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	player.conn[id].SetPongHandler(func(string) error {
+		player.conn[id].SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
 
 	for {
 		_, message, err := player.conn[id].ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway,
+				websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		var parsed Message
-		log.Printf("%s", message)
-		err = json.Unmarshal(message, &parsed)
-		if err != nil {
-			log.Println("json failed to parse")
-		}
-		parsed.Player = player.Name
-		log.Printf("Recieved message from %s -> lobby %v with the message %s", player.Name, id, parsed.Text)
+		log.Printf("Recieved message from %s -> lobby %v with the message %s", player.Name, id, message)
 
-		player.lobby[id].broadcast <- parsed
+		player.lobby[id].broadcast <- message
 	}
 } //}
 
@@ -131,7 +126,7 @@ func (player *Player) writePump(id int) { //{
 	for {
 		select {
 		case message, ok := <-player.send[id]:
-			log.Printf("Recieved message from lobby %v -> %s with the message %s", id, player.Name, message.Text)
+			log.Printf("Recieved message from lobby %v -> %s with the message %s", id, player.Name, message)
 			player.conn[id].SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The lobby closed the channel.
@@ -143,15 +138,12 @@ func (player *Player) writePump(id int) { //{
 			if err != nil {
 				return
 			}
-			parsed, _ := json.Marshal(message)
-			w.Write(parsed)
+			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
 			n := len(player.send[id])
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				parsed, _ := json.Marshal(<-player.send[id])
-				w.Write(parsed)
+			for i := 1; i < n; i++ {
+				w.Write(message)
 			}
 
 			if err := w.Close(); err != nil {

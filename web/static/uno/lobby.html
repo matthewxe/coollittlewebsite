@@ -12,13 +12,20 @@
       <button onmousedown="conn = websocket_connect('ws')">reload</button>
     </h1>
     <button onmousedown="window.location.href = '/uno';">Go back</button>
-    <h1>Lobby {{.Id}}</h1>
-    <h2>State: {{.State}}</h2>
+    <h1>Lobby <span id="id">{{.Id}}</span></h1>
+    <h2>
+      State:
+      <span id="state"
+        >{{if eq .State 0}}Ready{{else if eq .State 1}}Ongoing{{else if eq .State 2}}Done{{else}} Something went
+        wrong...{{end}}</span
+      >
+    </h2>
     <h2>Players:</h2>
-    <ul>
-      {{range $player, $inside := .Players}}
-      <li>{{$player.Name}}</li>
-      {{else}} T0 {{end}}
+    <ul id="players">
+      <li>{{.Leader.Name}} (leader) {{if .Leader.Current}}(you){{end}} {{if .Leader.Active}}/{{else}}X{{end}}</li>
+      {{range $index, $player := .Players}}
+      <li>{{$player.Name}} {{if $player.Current}}(you){{end}} {{if $player.Active}}/{{else}}X{{end}}</li>
+      {{end}}
     </ul>
 
     <h3>Chat</h3>
