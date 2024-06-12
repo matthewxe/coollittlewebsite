@@ -108,7 +108,7 @@ func (player *Player) readPump(id int) { //{
 		log.Printf("%s", message)
 		err = json.Unmarshal(message, &parsed)
 		if err != nil {
-			log.Fatal("json failed to parse")
+			log.Println("json failed to parse")
 		}
 		parsed.Player = player.Name
 		log.Printf("Recieved message from %s -> lobby %v with the message %s", player.Name, id, parsed.Text)
