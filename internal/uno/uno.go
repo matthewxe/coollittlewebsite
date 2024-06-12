@@ -1,6 +1,7 @@
 package uno
 
 import (
+	"bytes"
 	"coollittlewebsite/internal/serve/assets"
 	"fmt"
 	"html/template"
@@ -58,18 +59,28 @@ func serveList(w http.ResponseWriter, r *http.Request) { //{
 	var ongoing string
 	var done string
 	for i, lobbi := range lobbyList {
+		leader := lobbi.Leader.Name
 		var players string
 		for player := range lobbi.Players {
-			if player.Name != lobbi.Leader.Name {
+			if player.Name != leader {
 				players += ", "
 				players += player.Name
 			}
 		}
-		out := fmt.Sprintf(`
-			<li>%v. %s (leader)%s <button
-			onmousedown="window.location.href = '/uno/lobby/%v';">
-			Join</button></li>`,
-			i+1, lobbi.Leader.Name, players, i)
+		type list struct {
+			Id      int
+			Leader  string
+			Players string
+		}
+		listy := list{i, leader, players}
+		t, _ := template.New("list").Parse(`
+			<li>{{.Id}}. <b>{{.Leader}}</b> (leader)<b>{{.Players}}</b> <button
+			onmousedown="window.location.href = '/uno/lobby/{{.Id}}';">
+			Join</button></li>`)
+		buf := new(bytes.Buffer)
+		t.Execute(buf, listy)
+		out := buf.String()
+		log.Printf("Woah is that template %s", out)
 
 		switch lobbi.State {
 		case 0:
@@ -214,7 +225,7 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 
 	player.lobby[id] = lobber
 	player.conn[id] = conn
-	player.send[id] = make(chan []byte, 256)
+	player.send[id] = make(chan Message, 256)
 	player.lobby[id].register <- player
 
 	go player.writePump(id)
@@ -234,4 +245,5 @@ func checkLogin(w http.ResponseWriter, r *http.Request) (*Player, *http.Cookie) 
 	}
 	return player, cookie
 } //}
+
 // vim:foldmethod=marker:foldmarker=//{,//}:

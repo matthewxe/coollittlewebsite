@@ -18,10 +18,12 @@ type Lobby struct { //{
 	// But true means that ists connected by websocket, and false means no
 	Players map[*Player]bool
 
-	// Inbound messages from the clients.
-	broadcast chan []byte
+	// PlayerData map[*Player]UnoData
 
-	logs [][]byte
+	// Inbound messages from the clients.
+	broadcast chan Message
+
+	logs []Message
 	// Register requests from the clients.
 	register chan *Player
 
@@ -35,10 +37,14 @@ type Lobby struct { //{
 	// 2 Game finished
 } //}
 
+// type UnoData struct {
+
+// }
+
 func newLobby(leader *Player) *Lobby { //{
 	var lobby = &Lobby{
 		Players:    make(map[*Player]bool),
-		broadcast:  make(chan []byte),
+		broadcast:  make(chan Message),
 		register:   make(chan *Player),
 		unregister: make(chan *Player),
 		Leader:     leader,
@@ -50,7 +56,7 @@ func newLobby(leader *Player) *Lobby { //{
 	lobbyList = append(lobbyList, lobby)
 	log.Println(lobbyList)
 
-	leader.send[lobby.Id] = make(chan []byte, 256)
+	leader.send[lobby.Id] = make(chan Message, 256)
 	return lobby
 } //}
 
@@ -61,7 +67,7 @@ func (lobby *Lobby) run() { //{
 			// log.Printf("%s registered [lobby %v]", player.Name, lobby.Id)
 			for _, v := range lobby.logs {
 				player.send[lobby.Id] <- v
-				log.Printf("%s", v)
+				log.Printf("%s", v.Text)
 			}
 			lobby.Players[player] = true
 		case player := <-lobby.unregister:

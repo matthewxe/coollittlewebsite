@@ -2,9 +2,10 @@ var conn;
 var wsstatus = document.getElementById("ws");
 var msg = document.getElementById("msg");
 var log = document.getElementById("log");
+const websockettype = "wss";
 
 function wslog(message, ev) {
-        wsstatus.innerHTML = message;
+        wsstatus.innerText = message;
         console.log(message, ev);
 }
 
@@ -15,13 +16,19 @@ document.getElementById("form").onsubmit = function () {
         if (!msg.value) {
                 return false;
         }
-        conn.send(msg.value);
+        const json = {
+                Type: "message",
+                Text: msg.value,
+                Date: Date.now(),
+        };
+
+        conn.send(JSON.stringify(json));
         msg.value = "";
         return false;
 };
 
 if (window["WebSocket"]) {
-        conn = websocket_connect("wss");
+        conn = websocket_connect(websockettype);
 } else {
         wslog("Your browser does not support websockets");
 }
@@ -45,15 +52,22 @@ function websocket_connect(ws) {
                 wslog("New message", ev);
                 var messages = ev.data.split("\n");
                 for (var i = 0; i < messages.length; i++) {
+                        const msg = JSON.parse(messages[i]);
+                        console.log("JDSL", msg);
+                        const time = new Date(msg.Date);
+                        const timeStr = time.toLocaleTimeString();
+
                         var item = document.createElement("div");
-                        item.innerText = messages[i];
+                        item.innerText =
+                                timeStr + " " + msg.Player + ": " + msg.Text;
+
                         appendLog(item);
                 }
         };
 
         conn.onerror = function (ev) {
                 wslog("oopsie dasies ", ev);
-                conn = websocket_connect("wss");
+                conn = websocket_connect(websockettype);
         };
         return conn;
 }
