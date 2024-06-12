@@ -4,7 +4,7 @@ var msg = document.getElementById("msg");
 var log = document.getElementById("log");
 var state = document.getElementById("state");
 var players = document.getElementById("players");
-const websockettype = "ws";
+const websockettype = "wss";
 
 function wslog(message, ev) {
         wsstatus.innerText = message;
