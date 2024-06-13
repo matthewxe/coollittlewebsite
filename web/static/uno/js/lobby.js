@@ -92,6 +92,16 @@ function handleLobbyUpdate(json) {
         //        return;
         //}
         state.innerHTML = json.State;
+        switch (json.State) {
+                case 0:
+                        state.innerHTML = "Ready";
+                        break;
+                case 1:
+                        state.innerHTML = "Ongoing";
+                        break;
+                case 2:
+                        state.innerHTML = "Done";
+        }
         players.innerHTML = "";
         players.innerHTML += `<li>${handlePlayer(json.Leader, true)}</li>`;
 

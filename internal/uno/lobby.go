@@ -175,6 +175,9 @@ func (lobby *Lobby) run() { //{
 					}
 				}
 			case "start":
+				lobby.State = 1
+				lobby.UpdatePlayers()
+				log.Println("start")
 			default:
 				return
 			}

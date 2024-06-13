@@ -135,6 +135,9 @@ func (player *Player) readPump(id int) { //{
 			unmarshtype.Player = player.Name
 			unmarsh = unmarshtype
 		case StartJSON:
+			if player != player.lobby[id].Leader {
+				continue
+			}
 			Type = "start"
 		default:
 			return
