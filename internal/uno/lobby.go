@@ -21,10 +21,10 @@ type Lobby struct { //{
 	Players map[*Player]bool
 
 	// Logs of chat messages
-	logs []MessageJSON
+	logs []ChatJSON
 
 	// Inbound messages from the clients.
-	broadcast chan []byte
+	broadcast chan JSON
 
 	// Register requests from the clients.
 	register chan *Player
@@ -36,6 +36,25 @@ type Lobby struct { //{
 	// 1 Playing
 	// 2 Game finished
 	State int
+} //}
+
+func newLobby(leader *Player) *Lobby { //{
+	var lobby = &Lobby{
+		Players:    make(map[*Player]bool),
+		broadcast:  make(chan JSON),
+		register:   make(chan *Player),
+		unregister: make(chan *Player),
+		Leader:     leader,
+		State:      0,
+		Id:         lobbyCount,
+	}
+	lobby.Players[leader] = false
+	lobbyCount++
+	lobbyList = append(lobbyList, lobby)
+	// log.Println(lobbyList)
+
+	leader.send[lobby.Id] = make(chan JSON, 256)
+	return lobby
 } //}
 
 type PlayerJSON struct { //{
@@ -53,28 +72,40 @@ type LobbyJSON struct { //{
 	State   int
 } //}
 
-type MessageJSON struct { //{
+type ChatJSON struct { //{
 	Type   string
 	Player string
 	Text   string
-	Date   int
+	Date   int64
 } //}
 
-type MessageLogJSON struct { //{
+type ChatLogJSON struct { //{
 	Type string
-	Log  []MessageJSON
+	Log  []ChatJSON
 } //}
 
-func (l Lobby) MessageLog() []byte { // //{
-	log := MessageLogJSON{"messagelog", nil}
+type StartJSON struct { //{
+	Type string
+} //}
 
-	log.Log = append(log.Log, l.logs...)
+type JSON struct {
+	Type   string
+	Player *Player
+	JSON   []byte
+}
 
-	marshal, err := json.Marshal(log)
+func (l Lobby) MessageLog() JSON { // //{
+	messagelog := ChatLogJSON{"messagelog", nil}
+
+	messagelog.Log = append(messagelog.Log, l.logs...)
+
+	log.Println("SavedMessageLog", l.logs)
+	log.Println("MessageLog", messagelog.Log)
+	marshal, err := json.Marshal(messagelog)
 	if err != nil {
-		return nil
+		return JSON{"error", nil, nil}
 	}
-	return marshal
+	return JSON{"messagelog", nil, marshal}
 } // //}
 
 func (l Lobby) Jsonify(p *Player) LobbyJSON { //{
@@ -100,34 +131,18 @@ func (l Lobby) JsonifyBytify(p *Player) []byte { //{
 // lobby status so its always up to date
 func (l Lobby) UpdatePlayers() { // //{
 	for player := range l.Players {
-		player.send[l.Id] <- l.JsonifyBytify(player)
+		player.send[l.Id] <- JSON{"message", nil, l.JsonifyBytify(player)}
 	}
 } // //}
-
-func newLobby(leader *Player) *Lobby { //{
-	var lobby = &Lobby{
-		Players:    make(map[*Player]bool),
-		broadcast:  make(chan []byte),
-		register:   make(chan *Player),
-		unregister: make(chan *Player),
-		Leader:     leader,
-		State:      0,
-		Id:         lobbyCount,
-	}
-	lobby.Players[leader] = false
-	lobbyCount++
-	lobbyList = append(lobbyList, lobby)
-	log.Println(lobbyList)
-
-	leader.send[lobby.Id] = make(chan []byte, 256)
-	return lobby
-} //}
 
 func (lobby *Lobby) run() { //{
 	for {
 		select {
 		case player := <-lobby.register:
-			player.send[lobby.Id] <- lobby.MessageLog()
+			messagelog := lobby.MessageLog()
+			if messagelog.Type != "error" {
+				player.send[lobby.Id] <- messagelog
+			}
 			lobby.Players[player] = true
 			lobby.UpdatePlayers()
 		case player := <-lobby.unregister:
@@ -139,20 +154,29 @@ func (lobby *Lobby) run() { //{
 				}
 			}
 		case message := <-lobby.broadcast:
-			// lobby.logs = append(lobby.logs, message)
-			for player := range lobby.Players {
-				// log.Printf("Lobby.broadcast list players: %s", player.Name)
-				select {
-				case player.send[lobby.Id] <- message:
-					// log.Printf("%s messaged [lobby %v]: '%s'", player.Name, lobby.Id, message)
-				default:
-					// delete(lobby.players, player)
-					// log.Printf("%s failed to message and unregistered [lobby %v]", player.Name, lobby.Id)
-					lobby.Players[player] = false
-					if _, ok := player.send[lobby.Id]; !ok {
-						close(player.send[lobby.Id])
+			switch message.Type {
+			case "message":
+				var chat ChatJSON
+				if err := json.Unmarshal(message.JSON, &chat); err == nil {
+					lobby.logs = append(lobby.logs, chat)
+				}
+				for player := range lobby.Players {
+					// log.Printf("Lobby.broadcast list players: %s", player.Name)
+					select {
+					case player.send[lobby.Id] <- message:
+						// log.Printf("%s messaged [lobby %v]: '%s'", player.Name, lobby.Id, message)
+					default:
+						// delete(lobby.players, player)
+						// log.Printf("%s failed to message and unregistered [lobby %v]", player.Name, lobby.Id)
+						lobby.Players[player] = false
+						if _, ok := player.send[lobby.Id]; !ok {
+							close(player.send[lobby.Id])
+						}
 					}
 				}
+			case "start":
+			default:
+				return
 			}
 		}
 	}

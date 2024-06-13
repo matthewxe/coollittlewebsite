@@ -4,7 +4,7 @@ var msg = document.getElementById("msg");
 var log = document.getElementById("log");
 var state = document.getElementById("state");
 var players = document.getElementById("players");
-const websockettype = "wss";
+const websockettype = "ws";
 
 function wslog(message, ev) {
         wsstatus.innerText = message;
@@ -22,7 +22,6 @@ document.getElementById("form").onsubmit = function () {
         const json = {
                 Type: "message",
                 Text: msg.value,
-                Date: Date.now(),
         };
 
         conn.send(JSON.stringify(json));
@@ -96,6 +95,9 @@ function handleLobbyUpdate(json) {
         players.innerHTML = "";
         players.innerHTML += `<li>${handlePlayer(json.Leader, true)}</li>`;
 
+        if (json.Players == null) {
+                return;
+        }
         for (let index = 0; index < json.Players.length; index++) {
                 const element = handlePlayer(json.Players[index], false);
                 players.innerHTML += `<li>${element}</li>`;
@@ -136,5 +138,16 @@ function handleMessages(json) {
 }
 
 function handleMessagesLog(json) {
-        console.log("MessageLog");
+        for (let index = 0; index < json.Log.length; index++) {
+                const log = json.Log[index];
+                handleMessages(log);
+        }
+}
+
+function startLobby() {
+        const json = {
+                Type: "start",
+        };
+        conn.send(JSON.stringify(json));
+        conn.send;
 }

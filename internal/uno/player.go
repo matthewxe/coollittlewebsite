@@ -2,6 +2,7 @@ package uno
 
 import (
 	// "encoding/json"
+	"encoding/json"
 	"html"
 	"log"
 	"math/rand"
@@ -24,12 +25,12 @@ type Player struct { //{
 	// Buffered channel of outbound messages.
 	// Formatted in JSON
 	// Use DecodeJSON() to get the corresponding struct
-	send map[int]chan []byte
+	send map[int]chan JSON
 } //}
 
 func newPlayer(name string) (*Player, string) { //{
 	newplayer := &Player{lobby: make(map[int]*Lobby),
-		send: make(map[int]chan []byte),
+		send: make(map[int]chan JSON),
 		Name: html.EscapeString(name),
 		conn: make(map[int]*websocket.Conn)}
 	var len int = 24
@@ -53,6 +54,22 @@ func randIntExclude(top int, excluded []int) (random int) { //{
 	}
 	return
 } //}
+
+func MessageUnmarshal(message []byte) interface{} {
+	var chat ChatJSON
+
+	err := json.Unmarshal(message, &chat)
+	if err == nil && chat.Type == "message" {
+		return chat
+	}
+
+	var start StartJSON
+	err = json.Unmarshal(message, &start)
+	if err == nil && chat.Type == "start" {
+		return start
+	}
+	return nil
+}
 
 const ( //{
 	// Time allowed to write a message to the peer.
@@ -106,9 +123,29 @@ func (player *Player) readPump(id int) { //{
 			}
 			break
 		}
-		log.Printf("Recieved message from %s -> lobby %v with the message %s", player.Name, id, message)
+		// log.Printf("Recieved message from %s -> lobby %v with the message %s", player.Name, id, message)
 
-		player.lobby[id].broadcast <- message
+		var Type string
+
+		unmarsh := MessageUnmarshal(message)
+		switch unmarshtype := unmarsh.(type) {
+		case ChatJSON:
+			Type = "message"
+			unmarshtype.Date = time.Now().UnixMilli()
+			unmarshtype.Player = player.Name
+			unmarsh = unmarshtype
+		case StartJSON:
+			Type = "start"
+		default:
+			return
+		}
+		marsh, err := json.Marshal(unmarsh)
+		if err != nil {
+			log.Fatal("Schiesse")
+			return
+		}
+
+		player.lobby[id].broadcast <- JSON{Type, player, marsh}
 	}
 } //}
 
@@ -126,7 +163,7 @@ func (player *Player) writePump(id int) { //{
 	for {
 		select {
 		case message, ok := <-player.send[id]:
-			log.Printf("Recieved message from lobby %v -> %s with the message %s", id, player.Name, message)
+			// log.Printf("Recieved message from lobby %v -> %s with the message %s", id, player.Name, message)
 			player.conn[id].SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The lobby closed the channel.
@@ -138,19 +175,19 @@ func (player *Player) writePump(id int) { //{
 			if err != nil {
 				return
 			}
-			w.Write(message)
+			w.Write(message.JSON)
 
 			// Add queued chat messages to the current websocket message.
 			n := len(player.send[id])
 			for i := 1; i < n; i++ {
-				w.Write(message)
+				w.Write(message.JSON)
 			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			log.Printf("%s got ticked off in lobby %v", player.Name, id)
+			// log.Printf("%s got ticked off in lobby %v", player.Name, id)
 			player.conn[id].SetWriteDeadline(time.Now().Add(writeWait))
 			if err := player.conn[id].WriteMessage(websocket.PingMessage, nil); err != nil {
 				return

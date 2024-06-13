@@ -225,7 +225,7 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 
 	player.lobby[id] = lobber
 	player.conn[id] = conn
-	player.send[id] = make(chan []byte, 256)
+	player.send[id] = make(chan JSON, 256)
 	player.lobby[id].register <- player
 
 	go player.writePump(id)
