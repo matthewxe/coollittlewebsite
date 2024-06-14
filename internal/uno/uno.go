@@ -31,6 +31,7 @@ func Serve() { // //{
 	// Serve a lobby
 	http.HandleFunc("GET /uno/lobby/{id}", serveLobby)
 	http.HandleFunc("GET /uno/lobby/{id}/ws", serveLobbyWs)
+	http.HandleFunc("GET /uno/lobby/{id}/leave", serveLobbyLeave)
 } // //}
 
 func serveIndex(w http.ResponseWriter, r *http.Request) { //{
@@ -58,7 +59,7 @@ func serveList(w http.ResponseWriter, r *http.Request) { //{
 	var ready string
 	var ongoing string
 	var done string
-	for i, lobbi := range lobbyList {
+	for i, lobbi := range lobbyMap {
 		leader := lobbi.Leader.Name
 		var players string
 		for player := range lobbi.Players {
@@ -80,7 +81,7 @@ func serveList(w http.ResponseWriter, r *http.Request) { //{
 		buf := new(bytes.Buffer)
 		t.Execute(buf, listy)
 		out := buf.String()
-		log.Printf("Woah is that template %s", out)
+		// log.Printf("Woah is that template %s", out)
 
 		switch lobbi.State {
 		case 0:
@@ -174,7 +175,7 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
 		return
 	}
-	lobby := lobbyList[id]
+	lobby := lobbyMap[id]
 	if lobby.State != 0 {
 		log.Println("invalid lobby")
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
@@ -211,7 +212,7 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
 		return
 	}
-	lobber := lobbyList[id]
+	lobber := lobbyMap[id]
 	if lobber.State != 0 {
 		log.Println("invalid lobby")
 		http.Redirect(w, r, "/uno", http.StatusSeeOther)
@@ -230,6 +231,42 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 
 	go player.writePump(id)
 	go player.readPump(id)
+} //}
+
+func serveLobbyLeave(w http.ResponseWriter, r *http.Request) { //{
+	player, _ := checkLogin(w, r)
+	if player == nil {
+		return
+	}
+	id, _ := strconv.Atoi(r.PathValue("id"))
+	if lobbyCount <= id {
+		log.Println("invalid lobby")
+		http.Redirect(w, r, "/uno", http.StatusSeeOther)
+		return
+	}
+	lobby := lobbyMap[id]
+	if lobby.State != 0 {
+		log.Println("invalid lobby")
+		http.Redirect(w, r, "/uno", http.StatusSeeOther)
+		return
+	}
+
+	log.Printf("serving /uno/lobby/%v/leave to %v", id, player.Name)
+
+	if _, ok := lobby.Players[player]; !ok {
+		return
+	}
+
+	// if player == lobby.Leader {
+	// 	for i, v := range{
+	//
+	// 	}
+	// }
+	delete(lobby.Players, player)
+	close(player.send[lobby.Id])
+	lobby.UpdatePlayers()
+
+	http.Redirect(w, r, "/uno", http.StatusSeeOther)
 } //}
 
 func checkLogin(w http.ResponseWriter, r *http.Request) (*Player, *http.Cookie) { //{

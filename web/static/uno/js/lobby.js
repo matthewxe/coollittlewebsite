@@ -1,15 +1,15 @@
 var conn;
-var wsstatus = document.getElementById("ws");
+//var wsstatus = document.getElementById("ws");
 var msg = document.getElementById("msg");
 var log = document.getElementById("log");
 var state = document.getElementById("state");
 var players = document.getElementById("players");
-const websockettype = "wss";
+const websockettype = "ws";
 
-function wslog(message, ev) {
-        wsstatus.innerText = message;
-        console.log(message, ev);
-}
+//function wslog(message, ev) {
+//        wsstatus.innerText = message;
+//        console.log(message, ev);
+//}
 
 // Log //{{{
 document.getElementById("form").onsubmit = function () {
@@ -33,12 +33,12 @@ document.getElementById("form").onsubmit = function () {
 if (window["WebSocket"]) {
         conn = websocket_connect(websockettype);
 } else {
-        wslog("Your browser does not support websockets");
+        //wslog("Your browser does not support websockets");
 } //}}}
 
 // Websocket function{{{
 function websocket_connect(ws) {
-        wslog("Trying to connect");
+        //wslog("Trying to connect");
         conn = new WebSocket(
                 ws +
                         ":" +
@@ -50,12 +50,12 @@ function websocket_connect(ws) {
         );
 
         conn.onclose = function (ev) {
-                wslog("Connection closed", ev);
+                //wslog("Connection closed", ev);
         };
         conn.onmessage = on_message;
 
         conn.onerror = function (ev) {
-                wslog("oopsie dasies ", ev);
+                //wslog("oopsie dasies ", ev);
                 conn = websocket_connect(websockettype);
         };
         return conn;
@@ -72,7 +72,7 @@ function appendLog(item) {
 
 //Handle incoming messages{{{
 function on_message(ev) {
-        wslog("New message", ev);
+        //wslog("New message", ev);
         const json = JSON.parse(ev.data);
         console.log("OnMessage", json);
 
@@ -148,6 +148,10 @@ function handleMessages(json) {
 }
 
 function handleMessagesLog(json) {
+        if (json.Log == null) {
+                return;
+        }
+
         for (let index = 0; index < json.Log.length; index++) {
                 const log = json.Log[index];
                 handleMessages(log);

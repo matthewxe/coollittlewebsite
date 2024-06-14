@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-var lobbyList []*Lobby
+var lobbyMap map[int]*Lobby = make(map[int]*Lobby)
 var lobbyCount int = 0
 
 type Lobby struct { //{
@@ -49,8 +49,8 @@ func newLobby(leader *Player) *Lobby { //{
 		Id:         lobbyCount,
 	}
 	lobby.Players[leader] = false
+	lobbyMap[lobbyCount] = lobby
 	lobbyCount++
-	lobbyList = append(lobbyList, lobby)
 	// log.Println(lobbyList)
 
 	leader.send[lobby.Id] = make(chan JSON, 256)
