@@ -1,7 +1,6 @@
 let ongoing = document.getElementById("ongoing");
 
 function refresh(ongoing) {
-        console.log("yo");
         const url = new URL(
                 window.location.protocol +
                         "//" +

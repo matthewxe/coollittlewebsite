@@ -98,7 +98,22 @@ function handleLobbyUpdate(json) {
                         break;
                 case 1:
                         state.innerHTML = "Ongoing";
-                        break;
+
+                        const link = document.querySelector("body");
+
+                        const url = new URL(
+                                window.location.protocol +
+                                        "//" +
+                                        window.location.host +
+                                        "/uno/game.html",
+                        );
+
+                        fetch(url)
+                                .then((response) => response.text())
+                                .then((text) => {
+                                        link.innerHTML = text;
+                                });
+                        return;
                 case 2:
                         state.innerHTML = "Done";
         }
