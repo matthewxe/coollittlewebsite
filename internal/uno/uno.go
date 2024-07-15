@@ -2,17 +2,18 @@ package uno
 
 import (
 	"bytes"
-	"coollittlewebsite/internal/serve/assets"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"text/template"
 	"time"
+
+	"coollittlewebsite/internal/serve/assets"
 )
 
-func Serve() { // //{
-	// Main page and assets
+// Main page and assets
+func Serve() {
 	http.HandleFunc("GET /uno", serveIndex)
 	http.HandleFunc("GET /uno/{$}",
 		func(w http.ResponseWriter, r *http.Request) {
@@ -20,21 +21,32 @@ func Serve() { // //{
 		})
 	http.HandleFunc("GET /uno/", assets.ServeAssets)
 
-	// Logging in and out
+	// TODO: Logging in and out
 	http.HandleFunc("GET /uno/login", serveLogin)
 	http.HandleFunc("GET /uno/logout", serveLogout)
 
-	// Creating a lobby
+	// TODO: Creating a lobby
 	http.HandleFunc("GET /uno/create", serveCreate)
 	http.HandleFunc("GET /uno/list", serveList)
 
-	// Serve a lobby
-	http.HandleFunc("GET /uno/lobby/{id}", serveLobby)
-	http.HandleFunc("GET /uno/lobby/{id}/ws", serveLobbyWs)
-	http.HandleFunc("GET /uno/lobby/{id}/leave", serveLobbyLeave)
-} // //}
+	// TODO: Serve a lobby
+}
 
-func serveIndex(w http.ResponseWriter, r *http.Request) { //{
+func checkLogin(w http.ResponseWriter, r *http.Request) (*Player, *http.Cookie) {
+	cookie, err := r.Cookie("unoName")
+	if err != nil {
+		http.Redirect(w, r, "/uno/login", http.StatusSeeOther)
+		return nil, nil
+	}
+	player := playerList[cookie.Value]
+	if player == nil || player.Name == "" {
+		http.Redirect(w, r, "/uno/login", http.StatusSeeOther)
+		return nil, nil
+	}
+	return player, cookie
+}
+
+func serveIndex(w http.ResponseWriter, r *http.Request) {
 	player, _ := checkLogin(w, r)
 	if player == nil {
 		return
@@ -52,9 +64,9 @@ func serveIndex(w http.ResponseWriter, r *http.Request) { //{
 		log.Fatal(err)
 		return
 	}
-} //}
+}
 
-func serveList(w http.ResponseWriter, r *http.Request) { //{
+func serveList(w http.ResponseWriter, r *http.Request) {
 	checkLogin(w, r)
 	var ready string
 	var ongoing string
@@ -93,15 +105,16 @@ func serveList(w http.ResponseWriter, r *http.Request) { //{
 		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err := w.Write([]byte("<h1>Ready</h1>" + ready + "<h1>Ongoing</h1>" + ongoing + "<h1>Done</h1>" + done))
-
+	_, err := w.Write(
+		[]byte("<h1>Ready</h1>" + ready + "<h1>Ongoing</h1>" + ongoing + "<h1>Done</h1>" + done),
+	)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-} //}
+}
 
-func serveLogin(w http.ResponseWriter, r *http.Request) { //{
+func serveLogin(w http.ResponseWriter, r *http.Request) {
 	log.Println("serving /uno/login")
 	cookie, err := r.Cookie("unoName")
 	if err != nil || playerList[cookie.Value] == nil || playerList[cookie.Value].Name == "" {
@@ -127,9 +140,9 @@ func serveLogin(w http.ResponseWriter, r *http.Request) { //{
 		}
 	}
 	http.Redirect(w, r, "/uno", http.StatusSeeOther)
-} //}
+}
 
-func serveLogout(w http.ResponseWriter, r *http.Request) { //{
+func serveLogout(w http.ResponseWriter, r *http.Request) {
 	_, cookie := checkLogin(w, r)
 	if cookie == nil {
 		return
@@ -148,9 +161,9 @@ func serveLogout(w http.ResponseWriter, r *http.Request) { //{
 	http.SetCookie(w, c)
 	log.Println("")
 	http.Redirect(w, r, "/uno", http.StatusSeeOther)
-} //}
+}
 
-func serveCreate(w http.ResponseWriter, r *http.Request) { //{
+func serveCreate(w http.ResponseWriter, r *http.Request) {
 	player, _ := checkLogin(w, r)
 	if player == nil {
 		return
@@ -162,9 +175,9 @@ func serveCreate(w http.ResponseWriter, r *http.Request) { //{
 	log.Printf("creating lobby %d", lobby.Id)
 
 	http.Redirect(w, r, fmt.Sprintf("/uno/lobby/%v", lobby.Id), http.StatusSeeOther)
-} //}
+}
 
-func serveLobby(w http.ResponseWriter, r *http.Request) { //{
+func serveLobby(w http.ResponseWriter, r *http.Request) {
 	player, _ := checkLogin(w, r)
 	if player == nil {
 		return
@@ -199,9 +212,9 @@ func serveLobby(w http.ResponseWriter, r *http.Request) { //{
 		log.Fatal(err)
 		return
 	}
-} //}
+}
 
-func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
+func serveLobbyWs(w http.ResponseWriter, r *http.Request) {
 	player, _ := checkLogin(w, r)
 	if player == nil {
 		return
@@ -231,9 +244,9 @@ func serveLobbyWs(w http.ResponseWriter, r *http.Request) { //{
 
 	go player.writePump(id)
 	go player.readPump(id)
-} //}
+}
 
-func serveLobbyLeave(w http.ResponseWriter, r *http.Request) { //{
+func serveLobbyLeave(w http.ResponseWriter, r *http.Request) {
 	player, _ := checkLogin(w, r)
 	if player == nil {
 		return
@@ -259,7 +272,6 @@ func serveLobbyLeave(w http.ResponseWriter, r *http.Request) { //{
 
 	// if player == lobby.Leader {
 	// 	for i, v := range{
-	//
 	// 	}
 	// }
 	delete(lobby.Players, player)
@@ -267,20 +279,4 @@ func serveLobbyLeave(w http.ResponseWriter, r *http.Request) { //{
 	lobby.UpdatePlayers()
 
 	http.Redirect(w, r, "/uno", http.StatusSeeOther)
-} //}
-
-func checkLogin(w http.ResponseWriter, r *http.Request) (*Player, *http.Cookie) { //{
-	cookie, err := r.Cookie("unoName")
-	if err != nil {
-		http.Redirect(w, r, "/uno/login", http.StatusSeeOther)
-		return nil, nil
-	}
-	player := playerList[cookie.Value]
-	if player == nil || player.Name == "" {
-		http.Redirect(w, r, "/uno/login", http.StatusSeeOther)
-		return nil, nil
-	}
-	return player, cookie
-} //}
-
-// vim:foldmethod=marker:foldmarker=//{,//}:
+}

@@ -1,14 +1,15 @@
 package serve
 
 import (
+	"log"
+	"net/http"
+
 	"coollittlewebsite/internal/serve/assets"
 	"coollittlewebsite/internal/uno"
 	"coollittlewebsite/internal/webhooks"
-	"log"
-	"net/http"
 )
 
-const port string = ":8080"
+const port string = ":80"
 
 func Setup() {
 	log.Print("Listening on " + port + "...")
@@ -31,9 +32,9 @@ func Setup() {
 	http.HandleFunc("POST "+webhooks.GithubWebhookDir, webhooks.GithubWebhookHTTP)
 
 	// TODO: Blogs
-	//http.HandleFunc("GET "+ABOUT_DIR+"/blog/{id}", blog.ServeBlog)
-	//http.HandleFunc("GET "+ABOUT_DIR+"/addanewpostyoubingus", blog.ServeNewPost)
-	//http.HandleFunc("POST "+ABOUT_DIR+"/addanewpostyoubingus", blog.ServeNewPost)
+	// http.HandleFunc("GET "+ABOUT_DIR+"/blog/{id}", blog.ServeBlog)
+	// http.HandleFunc("GET "+ABOUT_DIR+"/addanewpostyoubingus", blog.ServeNewPost)
+	// http.HandleFunc("POST "+ABOUT_DIR+"/addanewpostyoubingus", blog.ServeNewPost)
 
 	// TODO: Uno 2
 	uno.Serve()
