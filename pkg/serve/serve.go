@@ -23,7 +23,7 @@ func ServeIndex(path string) {
 			http.ServeFile(w, r, StaticDir+path+"/index.html")
 		})
 	// Redirect
-	http.HandleFunc("GET /"+path+"/{$}",
+	http.HandleFunc("GET "+path+"/{$}",
 		func(w http.ResponseWriter, r *http.Request) {
 			log.Printf("redirecting %s/ -> %s", path, path)
 			http.Redirect(w, r, path, http.StatusPermanentRedirect)

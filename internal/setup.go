@@ -7,7 +7,7 @@ import (
 	"coollittlewebsite/internal/whataboutme"
 )
 
-const port string = ":80"
+const port string = ":8080"
 
 func Setup() {
 	log.Print("Listening on " + port + "...")

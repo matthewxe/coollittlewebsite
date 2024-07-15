@@ -1,7 +1,7 @@
 package main
 
 import (
-	"coollittlewebsite/internal/setup"
+	"coollittlewebsite/internal"
 )
 
 func main() {
