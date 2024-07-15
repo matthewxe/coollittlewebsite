@@ -12,15 +12,17 @@ import (
 // Relative to the root of the repository
 const StaticDir string = "web/static"
 
-// ServeIndex serves the index.html of a given path.
-// If a user enters the directory
+// ServeFile takes a path string and dir string. Path is where a file should
+// Appear on the website path. file is where a file should be looked for relative
+// to StaticDir.
 // Write with a starting slash but no ending slash
-// serve.ServeIndex("/whataboutme")
-func ServeIndex(path string) {
+//
+// ex. serve.ServeFile("/whataboutme" "/whataboutme/favicon.icon")
+func ServeFile(path string, file string) {
 	http.HandleFunc("GET "+path,
 		func(w http.ResponseWriter, r *http.Request) {
 			log.Print("Serving " + path)
-			http.ServeFile(w, r, StaticDir+path+"/index.html")
+			http.ServeFile(w, r, StaticDir+file)
 		})
 	// Redirect
 	http.HandleFunc("GET "+path+"/{$}",
@@ -30,11 +32,20 @@ func ServeIndex(path string) {
 		})
 }
 
+// ServeIndex serves the index.html of a given path.
+// It is simply a remap of ServeFile.
+//
+// ex. serve.ServeIndex("/whataboutme")
+func ServeIndex(path string) {
+	ServeFile(path, path+"/index.html")
+}
+
 // ServeAssets is meant to be used under http.HandleFunc.
-// ServeAssets will try to find the file in StaticDir + r.RequestURI
-// (ex. localhost/whataboutme/js/hello.js = web/static/whataboutme/js/hello.js)
-// If it does not exist, then try to redirect to the root of the directory,
+// ServeAssets will try to find the file in StaticDir + r.RequestURI.
+// If it does not exist, then try to redirect to the root of the directory.
 // If it does then serve the file.
+//
+// ex. localhost/whataboutme/js/hello.js -> web/static/whataboutme/js/hello.js
 func ServeAssets(w http.ResponseWriter, r *http.Request) {
 	log.Print("serving assets " + r.RequestURI)
 	var staticDir string = StaticDir + r.RequestURI
@@ -49,6 +60,7 @@ func ServeAssets(w http.ResponseWriter, r *http.Request) {
 }
 
 // Finds the root directory when given a directory
+//
 // "/go/is/the/best/language" -> "/go"
 func parseRootDir(s string) (out string) {
 	for i := 1; i < len(s); i++ {
