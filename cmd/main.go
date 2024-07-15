@@ -1,9 +1,9 @@
 package main
 
 import (
-	"coollittlewebsite/internal/serve"
+	"coollittlewebsite/internal/setup"
 )
 
 func main() {
-	serve.Setup()
+	setup.Setup()
 }

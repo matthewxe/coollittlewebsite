@@ -1,0 +1,11 @@
+#+TITLE Structure
+* Structure
+this outlines the general structure of the project
+
+** /cmd
+Includes ~main.go~ which just invokes the function in ~/internal/serve.go~ that starts the webserver in :80
+** /docs
+Includes these document ~.org~ files.
+** /internal
+Includes ~serve.go~ which starts and serves the webserver
+each folder is a web page directory. See [[file:webpages.org][Webpages]]
