@@ -12,6 +12,18 @@ import (
 // Relative to the root of the repository
 const StaticDir string = "web/static"
 
+// RedirectSlash sets up a http.HandleFunc that will automatically redirect
+// users to a non slash ending path of a path
+//
+// this/is/a/path/ -> this/is/a/path
+func RedirectSlash(path string) {
+	http.HandleFunc("GET "+path+"/{$}",
+		func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("redirecting %s/ -> %s", path, path)
+			http.Redirect(w, r, path, http.StatusPermanentRedirect)
+		})
+}
+
 // ServeFile takes a path string and dir string. Path is where a file should
 // Appear on the website path. file is where a file should be looked for relative
 // to StaticDir.
@@ -25,11 +37,7 @@ func ServeFile(path string, file string) {
 			http.ServeFile(w, r, StaticDir+file)
 		})
 	// Redirect
-	http.HandleFunc("GET "+path+"/{$}",
-		func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("redirecting %s/ -> %s", path, path)
-			http.Redirect(w, r, path, http.StatusPermanentRedirect)
-		})
+	RedirectSlash(path)
 }
 
 // ServeIndex serves the index.html of a given path.
