@@ -1,11 +1,13 @@
-#+TITLE: coollittlewebsite
-* coollittlewebsit
+# coollittlewebsite
+
 My own personal site where I can put anything I want in it.
 
 Written with the power of go baby
 
-** [[file:docs/structure.org][Structure]]
+## [[file:docs/structure.org][Structure]]
+
 - structure of the code
 
-** [[file:docs/webpages.org][Webpages]]
+## [[file:docs/webpages.org][Webpages]]
+
 - docs of available webpages and directories in the site
