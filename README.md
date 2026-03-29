@@ -4,10 +4,10 @@ My own personal site where I can put anything I want in it.
 
 Written with the power of go baby
 
-## [[file:docs/structure.org][Structure]]
+## [Structure](docs/structure.org)
 
 - structure of the code
 
-## [[file:docs/webpages.org][Webpages]]
+## [Webpages](docs/webpages.org)
 
 - docs of available webpages and directories in the site
