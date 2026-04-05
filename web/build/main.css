@@ -12,6 +12,9 @@
 }
 
 @layer components {
+  hr {
+    @apply w-full h-2 text-text;
+  }
   .bubble {
     @apply px-3 py-1 bg-dark-95 rounded-3xl text-xl;
   }
