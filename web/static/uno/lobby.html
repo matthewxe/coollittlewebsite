@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script defer src="/uno/js/lobby.js"></script>
-    <script defer src="/uno/js/game.js"></script>
+    <!-- <script defer src="/uno/js/lobby.js"></script> -->
+    <!-- <script defer src="/uno/js/game.js"></script> -->
   </head>
   <body>
     <!--<h1>-->
@@ -13,7 +13,7 @@
     <!--  <button onmousedown="conn = websocket_connect('ws')">reload</button>-->
     <!--</h1>-->
     <h1>Lobby <span id="id">{{.Id}}</span></h1>
-    <button onmousedown="window.location.href = '/uno';">Go back to lobby select</button>
+    <button onmousedown="window.location.href = '/uno'">Go back to lobby select</button>
     <button onmousedown="window.location.href = '/uno/{{.Id}}/leave';">Leave lobby</button>
     {{if .Leader.Current}}<button onmousedown="startLobby()">Start</button>{{end}}
     <h2>

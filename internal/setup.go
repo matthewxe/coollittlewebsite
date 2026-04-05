@@ -12,6 +12,8 @@ import (
 // The port in which the server runs on
 const port string = ":8080"
 
+const defaultPath string = "/whataboutme"
+
 // Setup runs http.ListenAndServe
 func Setup() {
 	log.Print("Listening on " + port + "...")
@@ -27,8 +29,8 @@ func Setup() {
 
 	// Redirect to "What about me?" when the requested uri is not found
 	http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("yo")
-		http.Redirect(w, r, "/whataboutme", http.StatusTemporaryRedirect)
+		log.Printf("redirecting %s -> %s", r.RequestURI, defaultPath)
+		http.Redirect(w, r, defaultPath, http.StatusTemporaryRedirect)
 	})
 
 	// Serve

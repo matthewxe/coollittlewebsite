@@ -1,3 +1,9 @@
+// if (window["WebSocket"]) {
+//         conn = websocket_connect(websockettype);
+// } else {
+//         //wslog("Your browser does not support websockets");
+// } //}}}
+
 let ongoing = document.getElementById("ongoing");
 
 function refresh(ongoing) {
