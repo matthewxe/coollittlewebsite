@@ -25,6 +25,6 @@
     @apply hover:underline text-primary;
   }
   .bento {
-    @apply hover:scale-125 hover:z-10 transition-all text-9xl text-dark-50;
+    @apply hover:scale-110 hover:z-10 transition-all text-9xl text-dark-50;
   }
 }

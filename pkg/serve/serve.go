@@ -48,23 +48,25 @@ func ServeIndex(path string) {
 	ServeFile(path, path+"/index.html")
 }
 
-// ServeAssets is meant to be used under http.HandleFunc.
 // ServeAssets will try to find the file in StaticDir + r.RequestURI.
 // If it does not exist, then try to redirect to the root of the directory.
 // If it does then serve the file.
 //
-// ex. localhost/whataboutme/js/hello.js -> web/static/whataboutme/js/hello.js
-func ServeAssets(w http.ResponseWriter, r *http.Request) {
-	log.Print("serving assets " + r.RequestURI)
-	var staticDir string = StaticDir + r.RequestURI
+// ex. serve.ServeAssets("/whataboutme")
+func ServeAssets(path string) {
+	http.HandleFunc("GET "+path+"/",
+		func(w http.ResponseWriter, r *http.Request) {
+			log.Print("serving assets " + r.RequestURI)
+			staticDir := StaticDir + r.RequestURI
 
-	_, err := os.Stat(staticDir)
-	if os.IsNotExist(err) {
-		log.Print("failed to serve asset " + staticDir)
-		http.Redirect(w, r, parseRootDir(r.RequestURI), http.StatusPermanentRedirect)
-		return
-	}
-	http.ServeFile(w, r, staticDir)
+			_, err := os.Stat(staticDir)
+			if os.IsNotExist(err) {
+				log.Print("failed to serve asset " + staticDir)
+				http.Redirect(w, r, parseRootDir(r.RequestURI), http.StatusPermanentRedirect)
+				return
+			}
+			http.ServeFile(w, r, staticDir)
+		})
 }
 
 // Finds the root directory when given a directory

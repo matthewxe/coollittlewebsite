@@ -25,6 +25,12 @@ func Setup() {
 	// TODO Blogs
 	// blog.Serve()
 
+	// Redirect to "What about me?" when the requested uri is not found
+	http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("yo")
+		http.Redirect(w, r, "/whataboutme", http.StatusTemporaryRedirect)
+	})
+
 	// Serve
 	err := http.ListenAndServe(port, nil)
 	if err != nil {
