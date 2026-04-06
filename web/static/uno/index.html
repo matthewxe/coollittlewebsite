@@ -9,7 +9,13 @@
     <!-- <script defer src="/uno/js/lobby.js"></script> -->
   </head>
   <body>
-    <button onmousedown="window.location.href = '/uno/upgrade'">Upgrade</button>
+    <h2>Status: <span id="status">Unknown</span></h2>
+    <div>
+      <h2>Name: <span id="name"></span></h2>
+      <h2>Count: <span id="count">0</span></h2>
+      <button onmousedown="increment()">Increment</button>
+    </div>
+    <div id="oppponent"></div>
     <!-- <h1> -->
     <!--   Logged in as {{.}} <button onmousedown="window.location.href = '/uno/logout'">Logout</button> -->
     <!--   <!--<sub>logging out deletes the account</sub>-->
