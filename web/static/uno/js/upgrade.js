@@ -1,17 +1,32 @@
 // TODO: I have no clue if this is a safe way to turn the uri into websocket
-connect();
 
-const wsUri = document.location.href.replace("http", "ws") + "/upgrade";
 var websocket;
 var username;
 
-async function connect() {
-        await fetch("/uno/cookie");
+connect();
 
-        if (document.cookie.indexOf("uno=") === -1) {
-                alert("Ayo cookies arent setting cuh, refresh or sum");
+async function connect() {
+        // await fetch("/uno/cookie");
+        //
+        // if (document.cookie.indexOf("uno=") === -1) {
+        //         alert("Ayo cookies arent setting cuh, refresh or sum");
+        //         return;
+        // }
+
+        if (!window["WebSocket"]) {
+                alert("Your browser does not support websockets");
                 return;
         }
+
+        const auth = await fetch("/uno/auth").then((response) =>
+                response.text(),
+        );
+        const wsUri = `${document.location.href.replace(
+                "http",
+                "ws",
+        )}/upgrade?room=uno&auth=${auth}`;
+        console.log(wsUri);
+
         websocket = new WebSocket(wsUri);
 
         websocket.addEventListener("open", () => {

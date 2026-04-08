@@ -1,55 +1,30 @@
 package uno
 
-// "encoding/json"
+// Maybe use JWT
+// TODO: Right now Everyone has complete access to refreshing and creating new accounts, we are only testing access tokens rn
+// TODO: Use refresh auths to save as a cookie and only use small tokens
+// TODO: Have user data saved even if refreshed via cookies
+// TODO: Make a refresh auth that is tied to someone's name, save a database of names
+// TODO: Implement in-band token refresh
+// TODO: Hide the secret somewhere
+// TODO: Allow ussers to create lobbies n shit
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	snapws "github.com/Atheer-Ganayem/SnapWS"
+	jwt "github.com/golang-jwt/jwt/v5"
 
 	serve "coollittlewebsite/pkg/serve"
 )
 
-var (
-	cookieName  = "uno"
-	globalCount int
-	// key -> username
-	keys     map[string](string)
-	manager  *snapws.Manager[string]
-	state    State
-	upgrader *snapws.Upgrader
-)
-
-// Main page and assets
-func Serve(man **snapws.Manager[string]) {
-	upgrader = snapws.NewUpgrader(nil)
-	upgrader.Use(checkCookie)
-	// TODO: Auth middleware?
-	*man = snapws.NewManager[string](upgrader)
-	manager = *man
-	// manager.Shutdown()
-
-	state = State{}
-	state.Players = make(map[string](Player))
-	keys = make(map[string](string))
-
-	// Hooks that do an action whenever someone connects
-	// manager.OnRegister = onRegister
-	// manager.OnUnregister = onUnregister
-
-	// Serve the /uno index and js
-	serve.ServeIndex("/uno")
-	serve.ServeAssets("/uno")
-	// Upgrade the websocket
-	http.HandleFunc("GET /uno/upgrade", handler)
-	http.HandleFunc("GET /uno/cookie", forceCookies)
-}
-
 type Envelope struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+	Type string `json:"type"`
+	Data any    `json:"data"`
 }
 
 // string of player is the username of the player
@@ -61,44 +36,89 @@ type Player struct {
 	Count int
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+var (
+	globalCount int
+	roomManager *snapws.RoomManager[string]
+	games       map[*snapws.Room[string]](State)
+	secret      []byte
+)
+
+// Main page and assets
+func Serve(man **snapws.RoomManager[string]) {
+	// Create Room Manager
+	*man = snapws.NewRoomManager[string](nil)
+	roomManager = *man
+	roomManager.Upgrader.Use(checkAuth)
+
+	roomManager.DefaultOnJoin = func(room *snapws.Room[string], conn *snapws.Conn, args ...any) {
+		name, _ := snapws.GetArg[string](args, 0)
+		log.Printf("%s Joined", name)
+
+		// Give the user their name
+		err := conn.SendJSON(
+			context.Background(),
+			Envelope{Type: "name", Data: map[string]string{"name": name}},
+		)
+		if err != nil {
+			return
+		}
+
+		games[room].Players[name] = Player{Count: 0}
+		updateAll(room)
+	}
+
+	roomManager.DefaultOnLeave = func(room *snapws.Room[string], conn *snapws.Conn, args ...any) {
+		log.Println(room.Key)
+		name, _ := snapws.GetArg[string](args, 0)
+		log.Printf("%s Left", name)
+		delete(games[room].Players, name)
+		updateAll(room)
+	}
+
+	games = make(map[*snapws.Room[string]](State))
+
+	// Create the "uno" room
+	room := roomManager.Add("uno")
+	games[room] = State{
+		Players: make(map[string](Player)),
+	}
+
+	serve.ServeIndex("/uno")
+	serve.ServeAssets("/uno")
+	http.HandleFunc("GET /uno/auth", auth)
+	http.HandleFunc("GET /uno/upgrade", upgrade)
+	// http.HandleFunc("GET /uno/cookie", getCookie)
+}
+
+func upgrade(w http.ResponseWriter, r *http.Request) {
 	log.Printf("upgrading %s", "/uno/upgrade")
 
-	cookie, err := r.Cookie(cookieName)
-	if err != nil {
-		return
-	}
-	key := cookie.Value
+	auth := r.URL.Query().Get("auth")
+	roomName := r.URL.Query().Get("room")
+	log.Printf("Validating query: '%s'", auth)
 
-	if c := manager.Get(key); c != nil {
-		c.CloseWithCode(1, "Opened in a different window")
-	}
-
-	conn, err := manager.Connect(key, w, r)
-	if err != nil {
-		return
-	}
-
-	username := keys[key]
-
-	defer conn.Close()
-	defer delete(keys, username)
-	defer delete(state.Players, conn.Key)
-	defer fmt.Println("Closed", key)
-
-	// Give the user their name
-	err = conn.SendJSON(
-		context.Background(),
-		Envelope{Type: "name", Data: map[string]string{"name": username}},
+	token, err := jwt.Parse(
+		auth,
+		func(token *jwt.Token) (any, error) { return secret, nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 	)
 	if err != nil {
 		return
 	}
+	name, err := token.Claims.(jwt.MapClaims).GetSubject()
+	if err != nil {
+		return
+	}
 
-	updateAll()
+	room := roomManager.Get(roomName)
+	conn, _, err := roomManager.Connect(w, r, roomName, name)
+	if err != nil {
+		return
+	}
+
+	defer conn.Close()
 
 	for {
-		// var msg string
 		env := Envelope{}
 		err := conn.ReadJSON(&env)
 
@@ -108,102 +128,136 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Non-fatal error:", err)
 			continue
 		}
-
 		switch env.Type {
 		case "increment":
-			increment(conn)
+			increment(name, room)
+			updateAll(room)
 		}
 	}
 }
 
-// This increments the conn and also sends a message to the client to update
-// NOTE: WE DO NOT WANT THIS BECAUSE IT DOES NOT UPDATE THE ENTIRE GAMESTATE WHICH WE WANT INSTEAD
-// only for testing
-func increment(conn *snapws.ManagedConn[string]) {
-	player, ok := state.Players[keys[conn.Key]]
+// Generate a new key for the user
+func auth(w http.ResponseWriter, r *http.Request) {
+	// Generate a new key
+	username := fmt.Sprintf("anonymous_%d", globalCount)
+	globalCount += 1
+
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256,
+		jwt.RegisteredClaims{
+			Subject:   username,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
+		},
+	)
+	s, err := t.SignedString(secret)
+	if err != nil {
+		return
+	}
+
+	w.Write([]byte(s))
+}
+
+// Generate a new key for the user
+func checkAuth(w http.ResponseWriter, r *http.Request) error {
+	auth := r.URL.Query().Get("auth")
+	log.Println("Validating query", auth)
+
+	if auth == "" {
+		return snapws.NewMiddlewareErr(http.StatusBadRequest, "Empty auth query")
+	}
+
+	token, err := jwt.Parse(
+		auth,
+		func(token *jwt.Token) (any, error) { return secret, nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+	)
+	switch {
+	case token.Valid:
+		return nil
+	case errors.Is(err, jwt.ErrTokenMalformed):
+		return snapws.NewMiddlewareErr(http.StatusBadRequest, "Not a token")
+	case errors.Is(err, jwt.ErrTokenSignatureInvalid):
+		return snapws.NewMiddlewareErr(http.StatusBadRequest, "Invalid signature")
+	case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
+		return snapws.NewMiddlewareErr(
+			http.StatusBadRequest,
+			"Token is either expired or not active yet",
+		)
+	default:
+		return snapws.NewMiddlewareErr(http.StatusBadRequest, "Couldn't Handle Token")
+	}
+
+	// cookie, err := r.Cookie(cookieName)
+	// if err == http.ErrNoCookie {
+	// 	log.Println("Cookie DENIED,  No Cookie")
+	// 	http.Redirect(w, r, "/uno/cookie", http.StatusTemporaryRedirect)
+	// 	return snapws.NewMiddlewareErr(http.StatusBadRequest, "You need a cookie")
+	// } else if _, ok := names[cookie.Value]; !ok {
+	// 	http.SetCookie(w, &http.Cookie{Name: cookieName, MaxAge: -1})
+	// 	log.Println("Cookie DENIED,  Wrong Cookie")
+	// 	return snapws.NewMiddlewareErr(http.StatusBadRequest, "Cookie is invalid")
+	// }
+	// return nil
+}
+
+// This increments the player associated with a conn in the gamestate and also sends a message to all clients to update their gamestate
+func increment(name string, room *snapws.Room[string]) {
+	player, ok := games[room].Players[name]
 	if !ok {
 		return
 	}
 
 	player.Count += 1
-	state.Players[keys[conn.Key]] = player
-	// err := conn.SendJSON(
-	// 	context.Background(),
-	// 	Envelope{
-	// 		Type: "count", Data: map[string]int{"count": player.Count},
-	// 	},
-	// )
-	// if err != nil {
-	// 	return
-	// }
-	updateAll()
+	games[room].Players[name] = player
 }
 
-// This sends the client an updated gamestate which they will rebuild their structure from
-func update(conn *snapws.ManagedConn[string]) {
-	err := conn.SendJSON(
+func updateAll(room *snapws.Room[string]) {
+	_, err := room.BroadcastJSON(
 		context.Background(),
-		Envelope{
-			Type: "state", Data: state,
-		},
+		Envelope{Type: "state", Data: games[room]},
+		nil,
 	)
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 }
 
-func updateAll() {
-	// Increment everyone when someone joins
-	for _, c := range manager.GetAllConns() {
-		update(c)
-	}
-}
-
-func checkCookie(w http.ResponseWriter, r *http.Request) error {
-	log.Println("yo")
-	cookie, err := r.Cookie(cookieName)
-	if err == http.ErrNoCookie {
-		return snapws.NewMiddlewareErr(http.StatusBadRequest, "You need a cookie")
-	} else if _, ok := keys[cookie.Value]; !ok {
-		http.SetCookie(w, &http.Cookie{Name: cookieName, MaxAge: -1})
-		return snapws.NewMiddlewareErr(http.StatusBadRequest, "Cookie is invalid")
-	}
-	return nil
-}
-
-func forceCookies(w http.ResponseWriter, r *http.Request) {
-	log.Println("yo")
-	cookie, err := r.Cookie(cookieName)
-	if err != http.ErrNoCookie {
-		if _, ok := keys[cookie.Value]; ok {
-			return
-		}
-	}
-
-	// Generate a new key
-	username := fmt.Sprintf("anonymous_%d", globalCount)
-	key := username + "_key"
-	globalCount += 1
-	keys[key] = username
-	state.Players[username] = Player{Count: 0}
-
-	new_cookie := http.Cookie{
-		Name:   cookieName,
-		Value:  key,
-		Path:   "/uno",
-		MaxAge: 3600,
-	}
-	http.SetCookie(w, &new_cookie)
-}
-
-// This is some dummy hooks.
-// In real world you might send a message to update the user's status for the other connected users.
-// func onRegister(conn *snapws.ManagedConn[string]) {
-// 	id := conn.Key
-// 	manager.BroadcastString(context.TODO(), []byte(id+" is online!"), id)
+// HTTP Middleware that blocks your connection if
+// func checkCookie(w http.ResponseWriter, r *http.Request) error {
+// 	log.Println("Checking cookie")
+// 	cookie, err := r.Cookie(cookieName)
+// 	if err == http.ErrNoCookie {
+// 		log.Println("Cookie DENIED,  No Cookie")
+// 		http.Redirect(w, r, "/uno/cookie", http.StatusTemporaryRedirect)
+// 		return snapws.NewMiddlewareErr(http.StatusBadRequest, "You need a cookie")
+// 	} else if _, ok := names[cookie.Value]; !ok {
+// 		http.SetCookie(w, &http.Cookie{Name: cookieName, MaxAge: -1})
+// 		log.Println("Cookie DENIED,  Wrong Cookie")
+// 		return snapws.NewMiddlewareErr(http.StatusBadRequest, "Cookie is invalid")
+// 	}
+// 	return nil
 // }
 //
-// func onUnregister(conn *snapws.ManagedConn[string]) {
-// 	id := conn.Key
-// 	conn.Manager.BroadcastString(context.TODO(), []byte(id+" is offline"), id)
+// func getCookie(w http.ResponseWriter, r *http.Request) {
+// 	log.Println("Forcing Cookie")
+// 	cookie, err := r.Cookie(cookieName)
+// 	if err != http.ErrNoCookie {
+// 		if _, ok := names[cookie.Value]; ok {
+// 			return
+// 		}
+// 	}
+//
+// 	// Generate a new key
+// 	username := fmt.Sprintf("anonymous_%d", globalCount)
+// 	key := username + "_key"
+// 	globalCount += 1
+// 	names[key] = username
+// 	state.Players[username] = Player{Count: 0}
+//
+// 	new_cookie := http.Cookie{
+// 		Name:   cookieName,
+// 		Value:  key,
+// 		Path:   "/uno",
+// 		MaxAge: 3600,
+// 	}
+// 	http.SetCookie(w, &new_cookie)
 // }

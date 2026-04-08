@@ -18,7 +18,7 @@ const (
 	defaultPath string = "/whataboutme"
 )
 
-var manager *snapws.Manager[string]
+var manager *snapws.RoomManager[string]
 
 // Setup runs http.ListenAndServe
 func Setup() {
