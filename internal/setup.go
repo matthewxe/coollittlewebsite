@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	snapws "github.com/Atheer-Ganayem/SnapWS"
+
 	"coollittlewebsite/internal/uno"
 )
 
@@ -15,6 +17,8 @@ const (
 	port        string = ":8080"
 	defaultPath string = "/whataboutme"
 )
+
+var manager *snapws.Manager[string]
 
 // Setup runs http.ListenAndServe
 func Setup() {
@@ -30,9 +34,10 @@ func Setup() {
 	// })
 
 	// TODO: Uno 2
-	uno.Serve()
+	uno.Serve(&manager)
+	defer manager.Shutdown()
 
-	// TODO Blogs
+	// TODO: Blogs
 	// blog.Serve()
 
 	// Serve

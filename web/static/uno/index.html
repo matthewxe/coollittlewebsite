@@ -5,27 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Create</title>
     <script defer src="/uno/js/upgrade.js"></script>
-    <!-- <script defer src="/uno/js/grab.js"></script> -->
-    <!-- <script defer src="/uno/js/lobby.js"></script> -->
   </head>
   <body>
+    <!-- <button onmousedown="fetch('/uno/cookie')">Get Cookie</button> -->
     <h2>Status: <span id="status">Unknown</span></h2>
     <div>
       <h2>Name: <span id="name"></span></h2>
       <h2>Count: <span id="count">0</span></h2>
       <button onmousedown="increment()">Increment</button>
     </div>
-    <div id="oppponent"></div>
-    <!-- <h1> -->
-    <!--   Logged in as {{.}} <button onmousedown="window.location.href = '/uno/logout'">Logout</button> -->
-    <!--   <!--<sub>logging out deletes the account</sub>-->
-    <!-- </h1> -->
-    <!-- <h1>Lobbies <button onmousedown="refresh(ongoing)">Refresh</button></h1> -->
-    <!---->
-    <!-- <ul id="ongoing"> -->
-    <!--   <li>woah</li> -->
-    <!--   <li>woahin</li> -->
-    <!-- </ul> -->
-    <!-- <button onmousedown="window.location.href = '/uno/create'">Create new lobby</button> -->
+    <div id="opponent"></div>
   </body>
 </html>
