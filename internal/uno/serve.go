@@ -1,6 +1,8 @@
 package uno
 
 // Maybe use JWT
+// Instead of storing auth as a
+
 // TODO: Right now Everyone has complete access to refreshing and creating new accounts, we are only testing access tokens rn
 // TODO: Use refresh auths to save as a cookie and only use small tokens
 // TODO: Have user data saved even if refreshed via cookies
@@ -10,6 +12,7 @@ package uno
 // TODO: Allow ussers to create lobbies n shit
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -18,6 +21,7 @@ import (
 
 	snapws "github.com/Atheer-Ganayem/SnapWS"
 	jwt "github.com/golang-jwt/jwt/v5"
+	_ "github.com/mattn/go-sqlite3"
 
 	serve "coollittlewebsite/pkg/serve"
 )
@@ -45,6 +49,25 @@ var (
 
 // Main page and assets
 func Serve(man **snapws.RoomManager[string]) {
+	// Databases of players
+	log.Println(sql.Drivers())
+	// db, err := sql.Open("sqlite3", "./tmp/players.db")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+	//
+	// defer db.Close()
+	// fmt.Println("Connected to the SQLite database successfully.")
+	//
+	// // Get the version of SQLite
+	// var sqliteVersion string
+	// err = db.QueryRow("select sqlite_version()").Scan(&sqliteVersion)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+
 	// Create Room Manager
 	*man = snapws.NewRoomManager[string](nil)
 	roomManager = *man

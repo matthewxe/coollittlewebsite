@@ -15,5 +15,5 @@ mkShellNoCC {
     air
   ];
 
-  shellHook = "";
+  CGO_ENABLED = 1;
 }
